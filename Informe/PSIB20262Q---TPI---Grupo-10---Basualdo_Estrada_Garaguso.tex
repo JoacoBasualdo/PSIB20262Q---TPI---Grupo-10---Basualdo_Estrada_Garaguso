@@ -51,6 +51,16 @@
 % Enlaces y referencias
 \usepackage[hidelinks]{hyperref}
 
+\usepackage{graphicx}
+\usepackage{subcaption}
+
+% Espacio vertical entre párrafos
+\setlength{\parskip}{0.2cm} 
+
+% Tamaño de la sangría en la primera línea
+\setlength{\parindent}{0.7cm}
+
+
 % =============================================================================
 % CONFIGURACIÓN GENERAL
 % =============================================================================
@@ -141,11 +151,57 @@ Firma y Fecha & \\ \hline
 
 \section{Introducción}
 
+\subsection{Marco Teórico}
+\subsubsection{Enfermedad de Alzheimer}
+
+La Enfermedad de Alzheimer es un trastorno neurodegenerativo primario y progresivo, catalogado como la causa más frecuente de demencia a nivel global. La patología se caracteriza por la acumulación extracelular de placas de proteína beta-amiloide y la formación intracelular de ovillos de proteína tau. Estas alteraciones desencadenan una cascada tóxica que interrumpe la comunicación celular, resultando en una pérdida masiva de sinapsis y la subsecuente muerte neuronal.
+
+A nivel macroscópico, esta neurodegeneración sostenida se manifiesta como una severa atrofia estructural del encéfalo. El proceso atrófico provoca una reducción mensurable del volumen del tejido cerebral. Como consecuencia directa de esta pérdida progresiva de masa encefálica, se produce un fenómeno anatómico compensatorio conocido como expansión ventricular, donde se ensanchan drásticamente para ocupar el volumen intracraneal que el tejido muerto ha dejado vacío, llenándose de líquido cefalorraquídeo (LCR).
+
+La magnitud de esta degradación anatómica presenta una fuerte correlación con el deterioro cognitivo del paciente. Clínicamente, el grado de este deterioro se estandariza mediante herramientas de evaluación.
+
+
+
+
+
+
+\subsubsection{Resonancia Magnética (MRI) y Secuencias T1}
+La Resonancia Magnética es una técnica de diagnóstico por imágenes no invasiva que emplea campos magnéticos estáticos y pulsos de radiofrecuencia para alinear y alterar transitoriamente el estado energético de los protones (átomos de hidrógeno) presentes en las moléculas de agua y grasa del cuerpo humano. A medida que estos protones regresan a su estado de equilibrio energético emiten señales electromagnéticas. Estas señales son capturadas por antenas receptoras y procesadas computacionalmente para reconstruir imágenes de altísima resolución espacial.
+
+
+Por su parte, la ponderación T1 está diseñada para explotar el tiempo de relajación longitudinal de los tejidos, maximizando el contraste anatómico. Esto se traduce en una escala de grises definida: el líquido cefalorraquídeo alojado en los ventrículos presenta se visualiza netamente hipointenso (negro u oscuro); la sustancia blanca, rica en lípidos debido a la mielina, se observa hiperintensa (blanca o clara); finalmente, la sustancia gris de la corteza cerebral adopta una señal isointensa (tonalidad gris intermedia).
+
+
+
+\subsubsection{Formato NIfT}
+no se si es necesario
+
+\subsection{Estado del Arte}
+
+El dataset proviene de una investigación realizada en la Escuela de Medicina de la Univeridad de Washington y fue publicada en el paper "Open access series of imaging studies: Longitudinal MRI data in nondemented and demented older adults", con el objetivo de generar opensource data para estimular la investigación. La base de datos posee resonacias magnéticas T1 de 150 sujetos (todos con mano derecha dominante) entre los 60 y 96 años con dos o más visitas separadas al menos un año. Se utilizó el Clinical Dementia Rating scale para determinar el nivel de demensia de los adultos lo cual se correlaciona con el avance de la enfermedad de Alzheimer. Para conocer el CDR score se analizan 6 dominios: memoria, orientación, resolución de problemas, cuidado personal, Hogar y pasatiempos y su desempeño en comunidad. Para CDR mayores a 0 se considera una demensia pequeña, y este criterio fue confirmado con examinacion histológica con un 93 \% de acierto. Por su parte, para reducir la relación señal-ruido y mejorar la calidad volumétrica, el protocolo de estudio estableció que para cada paciente se adquirieran de tres a cuatro imágenes individuales con ponderación T1 utilizando un resonador magnético Vision de 1.5 Tesla (Siemens, Erlangen, Alemania) en una misma sesión clínica
+
+
+Una gran importancia de la investigación realizada es analizar algunas técnicas de postprocesamiento utilizadas a principio de siglo, para obtener tres métricas fundamentales:El procesamiento volumétrico se fundamenta en el cálculo secuencial de tres métricas clave. 
+Inicialmente, el Volumen Intracraneal Total Estimado se obtiene mediante técnicas de registro espacial, alineando el cerebro del paciente con uno de referencia y multiplicando el volumen de este último por el determinante de la matriz de transformación afín. A partir de este, se determina el Volumen Cerebral Total Normalizado (nWBV), el cual representa el porcentaje del espacio intracraneal ocupado por masa encefálica viva. Este valor se extrae empleando herramientas de segmentación basadas en modelos estadísticos de Campos Aleatorios de Markov Ocultos, los cuales clasifican cada vóxel analizando tanto su nivel de brillo como su proximidad espacial. Finalmente, para evaluar el desgaste estructural longitudinal provocado por el Alzheimer, se calcula la Tasa de Atrofia Anual y se obtiene al restar el nWBV del segundo escaneo menos el del primero, normalizandolo. 
+
+
+
+\subsection{Objetivos}
+
+El objetivo principal de este proyecto es diseñar e implementar un algoritmo computacional capaz de cuantificar de manera objetiva la progresión de la atrofia estructural del cerebro asociada a la Enfermedad de Alzheimer. Mediante el procesamiento automatizado de imágenes por resonancia magnética (MRI), el sistema medirá métricamente la expansión de los ventrículos cerebrales (consecuencia directa de la pérdida de masa encefálica) y evaluará la degradación del tejido anatómico circundante. Este análisis se fundamentará en la comparación temporal de estudios longitudinales de un mismo paciente, permitiendo trazar la evolución morfológica de la enfermedad a lo largo del tiempo.
+
 \section{Materiales y Métodos}
 
 \section{Resultados}
 
 \section{Conclusiones}
+
+\section{Bibliografia}
+
+\begin{itemize}
+    \item Fowler, K. D., Funt, J. M., Artyomov, M. N., Zeskind, B., Kolitz, S. E., \& Towfic, F. (2015). Leveraging existing data sets to generate new insights into Alzheimer's disease biology in specific patient subsets. Scientific Reports, 5, Artículo 14324. https://doi.org/10.1038/srep14324
+
+\end{itemize}
 
 
 
