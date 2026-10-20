@@ -1,3 +1,6 @@
 nibabel
 numpy
 matplotlib
+SimpleITK
+pandas
+openpyxl

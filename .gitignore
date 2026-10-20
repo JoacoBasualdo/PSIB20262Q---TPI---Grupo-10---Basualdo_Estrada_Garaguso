@@ -14,5 +14,5 @@ __pycache__/
 .DS_Store
 Thumbs.db
 
-# Datos médicos pesados (¡Clave!)
+# Datos médicos pesados
 Dataset/
