@@ -27,7 +27,10 @@ import time
 import urllib.request
 import pandas as pd
 
-RUTA_DATASET = "Dataset"
+RUTA_DATASET = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    "Dataset"
+)
 RUTA_DATOS_CLINICOS = os.path.join(RUTA_DATASET, "oasis_longitudinal_demographics.xlsx")
 
 URL_DEMOGRAFIA = "https://sites.wustl.edu/oasisbrains/files/2024/03/oasis_longitudinal_demographics-8d83e569fa2e2d30.xlsx"
@@ -95,26 +98,23 @@ class _Progreso:
 
 # Devuelve de dónde leer el .tar.gz: del disco si ya está bajado completo, si no de internet
 def abrir_fuente(url, carpeta):
-    local = os.path.join(carpeta, os.path.basename(url))
-    if os.path.exists(local + ".aria2"):
-        sys.exit(f"{local} todavía se está descargando (existe {local}.aria2). "
-                 "Esperá a que aria2c termine y volvé a correr.")
-    if os.path.exists(local):
-        total = os.path.getsize(local)
-        print(f"\nLeyendo archivo local {local} ({total / 1024 ** 3:.1f} GB)")
-        return open(local, "rb"), total
+    
+    nombre = os.path.basename(url)
+    local = os.path.join(carpeta, nombre)
 
-    print(f"\nLeyendo {url}")
-    pedido = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-    try:
-        respuesta = urllib.request.urlopen(pedido, timeout=TIEMPO_LIMITE)
-    except Exception as error:
-        sys.exit(f"No se pudo conectar con {url}\n  Error: {error}\n"
-                 "  Probá abrir ese link en el navegador para ver si el servidor responde "
-                 "o si pide iniciar sesión / solicitar acceso.")
-    total = int(respuesta.headers.get("Content-Length") or 0)
-    print(f"  Conectado (HTTP {respuesta.status}). Tamaño: {total / 1024 ** 3:.1f} GB")
-    return respuesta, total
+    print(f"Buscando archivo en: {local}")
+
+    if not os.path.isfile(local):
+        raise FileNotFoundError(
+            f"No se encontró el archivo: {local}"
+        )
+
+    total = os.path.getsize(local)
+
+    print(f"Archivo encontrado: {nombre}")
+    print(f"Tamaño: {total / 1024**3:.2f} GB")
+
+    return open(local, "rb"), total
 
 
 # Recorre el .tar.gz archivo por archivo y guarda solo los de los pacientes pedidos.
@@ -199,4 +199,32 @@ def main():
 
 
 if __name__ == "__main__":
+    
+    print("\n===== DIAGNÓSTICO =====")
+
+    print("Script ejecutado:")
+    print(os.path.abspath(__file__))
+
+    print("\nCarpeta Dataset buscada:")
+    print(os.path.abspath(RUTA_DATASET))
+
+    print("\nArchivos encontrados:")
+
+    if os.path.isdir(RUTA_DATASET):
+        for archivo in os.listdir(RUTA_DATASET):
+            print(repr(archivo))
+    else:
+        print("ERROR: No existe la carpeta Dataset")
+
+    print("\nVerificación de TAR.GZ:")
+
+    for nombre in [
+        "OAS2_RAW_PART1.tar.gz",
+        "OAS2_RAW_PART2.tar.gz"
+    ]:
+        ruta = os.path.join(RUTA_DATASET, nombre)
+        print(f"{nombre}: {os.path.isfile(ruta)}")
+
+    print("=======================\n")
+
     main()

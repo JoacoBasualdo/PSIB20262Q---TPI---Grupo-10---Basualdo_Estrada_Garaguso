@@ -341,7 +341,8 @@ def rigida_desde_atlas(afin_ref, afin_actual, centro):
 #   "normalizada", "intracraneal", "tamano_voxel", "transformada_atlas"
 def mascara_cerebro_seguimiento(normalizada, mascara_cabeza, tamano_voxel, referencia,
                                 imagen_atlas=None, mascara_cabeza_atlas=None,
-                                margen_mm=2.0, apertura_mm=1.5):
+                                margen_mm=2.0, apertura_mm=1.5,
+                                devolver_transformada=False):
     if imagen_atlas is None:
         imagen_atlas, mascara_cabeza_atlas = normalizada, mascara_cabeza
     normalizada_ref = referencia["normalizada"]
@@ -404,4 +405,6 @@ def mascara_cerebro_seguimiento(normalizada, mascara_cabeza, tamano_voxel, refer
     rotacion = float(np.degrees(np.abs(parametros[:3])).max())
     traslacion = float(np.linalg.norm(parametros[3:6]))
 
+    if devolver_transformada:
+        return mascara_tejido, mascara_intracraneal, umbral, centros, (rotacion, traslacion, correlacion), transformada
     return mascara_tejido, mascara_intracraneal, umbral, centros, (rotacion, traslacion, correlacion)

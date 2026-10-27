@@ -48,6 +48,9 @@ from Funciones.Lectura import cargar_datos_clinicos, buscar_carpeta_visita, list
 from Funciones.Acondicionamiento import promediar_adquisiciones, filtro_mediana, corregir_bias_field, normalizar_intensidad
 from Funciones.Visualizacion import visualizar_planos_ortogonales, graficar_histogramas_visitas, visualizar_mascaras, graficar_histograma_umbral
 from Funciones.Features import mascara_cerebro, mascara_cerebro_seguimiento, volumen_ml
+from Funciones.AnalisisLongitudinal import calcular_evolucion, resumir_pacientes, guardar_graficos_evolucion
+from Funciones.SegmentacionVentricular import segmentar_ventriculos, calcular_cambios_ventriculares, visualizar_ventriculos, graficar_evolucion_ventricular, guardar_mascara_ventricular, visualizar_comparacion_ventricular
+from Funciones.AnalisisClinico import analizar_evolucion_clinica
 from Funciones import Reporte
 
 RUTA_DATASET = "Dataset"
@@ -76,6 +79,11 @@ def procesar_paciente(paciente_id):
     referencia = None  # datos de la primera visita (ver más abajo), contra la que se registran las demás
     valores_histograma = []
     nombres_histograma = []
+
+    # Para comparar MR1 con la última visita sobre los mismos cortes anatómicos.
+    # Solo se conservan dos imágenes en memoria; el resto del procesamiento no cambia.
+    primera_visita_ventricular = None
+    ultima_visita_ventricular = None
 
     for mri_id in datos["MRI ID"].head(CANTIDAD_VISITAS):
         Reporte.agregar_subtitulo(f"Visita {mri_id}")
@@ -173,9 +181,14 @@ def procesar_paciente(paciente_id):
             origen_zona = "atlas MNI152 (registro afín)"
             corr = 1.0  # la primera visita es la referencia: no se registra contra nada
         else:
-            mascara_tejido, mascara_intracraneal, umbral, centros, (rot, tras, corr) = mascara_cerebro_seguimiento(
-                normalizada, mascara, tamano_voxel, referencia, normalizada_1, mascara_1
+            mascara_tejido, mascara_intracraneal, umbral, centros, (rot, tras, corr), transformada_visitas = mascara_cerebro_seguimiento(
+                normalizada, mascara, tamano_voxel, referencia, normalizada_1, mascara_1,
+                devolver_transformada=True
             )
+            import SimpleITK as sitk
+            transformada_atlas = sitk.CompositeTransform([
+                referencia["transformada_atlas"], transformada_visitas
+            ])
             origen_zona = (f"{referencia['mri_id']} (registro rígido: rotación máx = {rot:.2f}°, "
                            f"traslación = {tras:.2f} mm, correlación = {corr:.3f})")
 
@@ -184,6 +197,46 @@ def procesar_paciente(paciente_id):
         fila = datos[datos["MRI ID"] == mri_id].iloc[0]
         etiv_ml = fila["eTIV"]  # en el Excel está en cm^3 = ml
         nwbv_propio = volumen_tejido / etiv_ml
+
+        # ---- Segmentación preliminar de los ventrículos laterales ----
+        mascara_ventricular, info_ventricular = segmentar_ventriculos(
+            normalizada, mascara_intracraneal, mascara_tejido, umbral, tamano_voxel,
+            transformada_atlas=transformada_atlas
+        )
+        volumen_ventricular = info_ventricular["volumen_ml"]
+        print(f"  Volumen ventricular estimado: {volumen_ventricular:.1f} ml "
+              f"({info_ventricular['estado']})")
+
+        # Guardar la máscara binaria de cada visita en formato NIfTI 3D.
+        # Se usa la affine de mpr-1: la segmentación tiene la misma grilla.
+        ruta_mascara_ventricular = os.path.join(
+            RUTA_RESULTADOS, "MascarasVentriculares", paciente_id,
+            f"{mri_id}_ventriculos.nii.gz"
+        )
+        guardar_mascara_ventricular(
+            mascara_ventricular, rutas[0], ruta_mascara_ventricular
+        )
+        print(f"  Máscara 3D guardada en: {ruta_mascara_ventricular}")
+
+        # Para la figura comparativa se guardan MR1 y la última visita procesada.
+        # 'transformada_visitas' viene de Features.py y lleva la visita actual a MR1.
+        if primera_visita_ventricular is None:
+            primera_visita_ventricular = {
+                "id": mri_id,
+                "imagen": normalizada,
+                "mascara": mascara_ventricular,
+                "tamano_voxel": tamano_voxel,
+            }
+        ultima_visita_ventricular = {
+            "id": mri_id,
+            "imagen": normalizada,
+            "mascara": mascara_ventricular,
+            "tamano_voxel": tamano_voxel,
+            "transformada_visitas": (
+                None if mri_id == primera_visita_ventricular["id"]
+                else transformada_visitas
+            ),
+        }
 
         print()
         print("Extracción del cerebro:")
@@ -218,6 +271,11 @@ def procesar_paciente(paciente_id):
             "volumen_tejido_ml": round(volumen_tejido, 1),
             "volumen_intracraneal_ml": round(volumen_intracraneal, 1),
             "nwbv_propio": round(nwbv_propio, 4),
+            "volumen_ventricular_ml": round(volumen_ventricular, 2),
+            "volumen_ventriculo_izquierdo_ml": round(info_ventricular.get("volumen_izquierdo_ml", np.nan), 2),
+            "volumen_ventriculo_derecho_ml": round(info_ventricular.get("volumen_derecho_ml", np.nan), 2),
+            "estado_ventricular": info_ventricular["estado"],
+            "ruta_mascara_ventricular": ruta_mascara_ventricular,
             "umbral_tejido": round(float(umbral), 4),
             "correlacion_registro": round(corr, 4),
         })
@@ -230,6 +288,11 @@ def procesar_paciente(paciente_id):
             nombres=["Tejido cerebral", "Intracraneal"]
         )
         Reporte.agregar_figura(fig_cerebro)
+
+        fig_ventriculos = visualizar_ventriculos(
+            normalizada, mascara_ventricular, mri_id, tamano_voxel
+        )
+        Reporte.agregar_figura(fig_ventriculos)
 
         fig_umbral = graficar_histograma_umbral(
             normalizada[mascara], umbral, centros,
@@ -274,6 +337,37 @@ def procesar_paciente(paciente_id):
         )
         Reporte.agregar_figura(fig_histogramas)
 
+    # Comparación visual sobre exactamente los mismos cortes anatómicos.
+    # La última visita se remuestrea en la grilla de MR1 con el registro ya calculado.
+    if (primera_visita_ventricular is not None
+            and ultima_visita_ventricular is not None
+            and ultima_visita_ventricular["id"] != primera_visita_ventricular["id"]):
+        fig_comparacion = visualizar_comparacion_ventricular(
+            primera_visita_ventricular["imagen"],
+            primera_visita_ventricular["mascara"],
+            primera_visita_ventricular["tamano_voxel"],
+            ultima_visita_ventricular["imagen"],
+            ultima_visita_ventricular["mascara"],
+            ultima_visita_ventricular["tamano_voxel"],
+            ultima_visita_ventricular["transformada_visitas"],
+            paciente_id,
+            primera_visita_ventricular["id"],
+            ultima_visita_ventricular["id"],
+        )
+        carpeta_comparacion = os.path.join(
+            RUTA_RESULTADOS, "Graficos", "ComparacionAnatomica"
+        )
+        os.makedirs(carpeta_comparacion, exist_ok=True)
+        ruta_comparacion_anatomica = os.path.join(
+            carpeta_comparacion, f"comparacion_ventricular_{paciente_id}.png"
+        )
+        fig_comparacion.savefig(
+            ruta_comparacion_anatomica, dpi=170, bbox_inches="tight"
+        )
+        Reporte.agregar_subtitulo("Comparación anatómica MR1 vs última visita")
+        Reporte.agregar_figura(fig_comparacion)
+        print(f"Comparación anatómica guardada en: {ruta_comparacion_anatomica}")
+
     os.makedirs(RUTA_RESULTADOS, exist_ok=True)
     ruta_pdf = os.path.join(RUTA_RESULTADOS, f"{paciente_id}_visitas.pdf")
     Reporte.guardar_pdf(ruta_pdf, titulo=f"Paciente {paciente_id}")
@@ -290,6 +384,48 @@ def main():
         todas_las_filas += procesar_paciente(paciente_id)
         pd.DataFrame(todas_las_filas).to_csv(RUTA_CSV, index=False)
         print(f"Tabla actualizada: {RUTA_CSV}")
+
+    # Análisis longitudinal de los volúmenes cerebrales entre visitas.
+    if not todas_las_filas:
+        print("No se procesó ninguna visita; se omite el análisis longitudinal.")
+        return
+
+    evolucion = calcular_evolucion(pd.DataFrame(todas_las_filas))
+    resumen = resumir_pacientes(evolucion)
+
+    ruta_comparacion = os.path.join(RUTA_RESULTADOS, "comparacion_volumenes.csv")
+    ruta_resumen = os.path.join(RUTA_RESULTADOS, "resumen_longitudinal.csv")
+    evolucion.to_csv(ruta_comparacion, index=False)
+    resumen.to_csv(ruta_resumen, index=False)
+    print(f"Comparación longitudinal guardada en: {ruta_comparacion}")
+    print(f"Resumen longitudinal guardado en: {ruta_resumen}")
+
+    carpeta_graficos = os.path.join(RUTA_RESULTADOS, "Graficos")
+    rutas_graficos = guardar_graficos_evolucion(evolucion, carpeta_graficos)
+    for ruta in rutas_graficos:
+        print(f"Gráfico guardado en: {ruta}")
+
+    # Comparación longitudinal de los volúmenes ventriculares.
+    ventriculos = calcular_cambios_ventriculares(pd.DataFrame(todas_las_filas))
+    ruta_ventriculos = os.path.join(RUTA_RESULTADOS, "comparacion_ventriculos.csv")
+    ventriculos.to_csv(ruta_ventriculos, index=False)
+    print(f"Comparación ventricular guardada en: {ruta_ventriculos}")
+    for ruta in graficar_evolucion_ventricular(ventriculos, carpeta_graficos):
+        print(f"Gráfico ventricular guardado en: {ruta}")
+
+    # Análisis morfológico-clínico: compara volúmenes, nWBV, CDR y MMSE.
+    # Se ejecuta sobre la tabla ya calculada, sin repetir el procesamiento MRI.
+    detalle_clinico, resumen_clinico, graficos_clinicos = analizar_evolucion_clinica(
+        pd.DataFrame(todas_las_filas), RUTA_RESULTADOS
+    )
+    print("\n========== ANÁLISIS MORFOLÓGICO-CLÍNICO ==========")
+    print(resumen_clinico[[
+        "paciente", "cambio_cerebral_pct", "cambio_ventricular_pct",
+        "cambio_cdr", "cambio_mmse_puntos"
+    ]].to_string(index=False))
+    print("Tablas guardadas en Resultados/ (analisis_clinico_integrado.csv y resumen_clinico_integrado.csv)")
+    for ruta in graficos_clinicos:
+        print(f"Gráfico clínico guardado en: {ruta}")
 
 
 if __name__ == "__main__":

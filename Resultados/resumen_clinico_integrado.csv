@@ -1,0 +1,5 @@
+paciente,grupo,visitas,anios_seguimiento,cambio_cerebral_ml,cambio_cerebral_pct,cambio_ventricular_ml,cambio_ventricular_pct,cdr_inicial,cdr_final,cambio_cdr,mmse_inicial,mmse_final,cambio_mmse_puntos,patron_morfologico,ventriculos_sin_validar
+OAS2_0048,Demented,5,3.376,-80.7,-6.59,17.08,30.42,1.0,1.0,0.0,19.0,4.0,-15.0,Menor volumen cerebral y mayor volumen ventricular,True
+OAS2_0070,Nondemented,5,6.533,-1.9,-0.15,8.26,14.24,0.0,0.0,0.0,28.0,30.0,2.0,Menor volumen cerebral y mayor volumen ventricular,True
+OAS2_0087,Demented,2,2.064,-17.4,-1.68,3.54,7.35,1.0,2.0,1.0,26.0,21.0,-5.0,Menor volumen cerebral y mayor volumen ventricular,True
+OAS2_0127,Converted,5,7.225,-72.2,-6.41,20.75,49.5,0.0,0.5,0.5,29.0,30.0,1.0,Menor volumen cerebral y mayor volumen ventricular,True
