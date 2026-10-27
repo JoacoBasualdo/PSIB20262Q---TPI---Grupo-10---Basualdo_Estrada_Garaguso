@@ -41,6 +41,3 @@ def buscar_carpeta_visita(ruta_dataset, mri_id):
     if not coincidencias:
         return None
     return coincidencias[0]
-    datos = pd.read_excel(ruta_xlsx)
-    datos_paciente = datos[datos["Subject ID"] == paciente_id]
-    return datos_paciente.sort_values("Visit").reset_index(drop=True)

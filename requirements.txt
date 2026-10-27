@@ -4,3 +4,5 @@ matplotlib
 SimpleITK
 pandas
 openpyxl
+scipy
+nilearn

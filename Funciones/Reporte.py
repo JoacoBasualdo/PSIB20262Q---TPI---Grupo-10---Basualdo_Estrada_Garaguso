@@ -4,6 +4,9 @@ from datetime import datetime
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 
+# Las figuras quedan abiertas hasta armar el PDF al final; se desactiva el aviso de "más de 20 figuras"
+plt.rcParams["figure.max_open_warning"] = 0
+
 TAMANIO_PAGINA = (8.27, 11.69)
 MARGEN_SUPERIOR = 0.95
 MARGEN_INFERIOR = 0.05
