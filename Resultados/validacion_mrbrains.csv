@@ -1,0 +1,8 @@
+sujeto,ventriculos_manual_ml,ventriculos_propio_ml,dice_ventriculos,estado_ventricular,zona_atlas_vs_intracraneal,error_ventriculos_pct
+14,25.67,19.37,0.837,REVISAR_MASCARA,1.02,-24.5
+1,36.8,30.18,0.881,REVISAR_MASCARA,1.14,-18.0
+27,78.36,63.98,0.877,REVISAR_MASCARA,1.15,-18.4
+29,35.12,33.22,0.82,REVISAR_MASCARA,1.17,-5.4
+4,57.66,53.35,0.911,REVISAR_MASCARA,1.1,-7.5
+5,30.09,22.99,0.831,REVISAR_MASCARA,1.13,-23.6
+7,24.16,14.7,0.738,REVISAR_MASCARA,1.59,-39.2
