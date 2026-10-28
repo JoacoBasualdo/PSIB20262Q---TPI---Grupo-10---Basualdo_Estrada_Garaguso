@@ -1,0 +1,5 @@
+paciente,grupo,visitas,anios_seguimiento,pendiente_nwbv_propio_anio,pendiente_nwbv_oasis_anio,relacion_pendientes,tasa_propia_pct_anio,tasa_oasis_pct_anio,diferencia_media_nwbv,correlacion
+OAS2_0070,Nondemented,5,6.53,-0.0045,-0.004,1.11,-0.58,-0.55,0.0449,0.86
+OAS2_0048,Demented,5,3.38,-0.0162,-0.0104,1.57,-2.25,-1.46,0.0,0.93
+OAS2_0087,Demented,2,2.06,-0.0142,-0.0112,1.27,-2.01,-1.64,0.0215,
+OAS2_0127,Converted,5,7.22,-0.0081,-0.008,1.02,-1.18,-1.09,-0.0357,0.956
