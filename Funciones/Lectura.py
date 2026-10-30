@@ -1,3 +1,11 @@
+# =============================================================================
+# LECTURA
+# =============================================================================
+# Carga de datos desde el disco:
+#   - OASIS-2: volúmenes Analyze/NIfTI de cada adquisición, tamaño de vóxel, carpetas de
+#     cada visita y el Excel clínico.
+#   - MRBrainS18 (validación): T1 de 1 mm y segmentación manual de cada sujeto.
+
 import os
 import glob
 import nibabel as nib
@@ -41,3 +49,33 @@ def buscar_carpeta_visita(ruta_dataset, mri_id):
     if not coincidencias:
         return None
     return coincidencias[0]
+
+
+# Busca, dentro de la carpeta de un sujeto, la segmentación manual y la T1 3D de 1 mm.
+# Se prefiere la T1 original (carpeta "orig"), sin corregir, porque nuestro procesamiento
+# hace su propia corrección de bias (N4), igual que con OASIS.
+def buscar_archivos_mrbrains(carpeta_sujeto):
+    segmentacion = glob.glob(os.path.join(carpeta_sujeto, "**", "segm.nii.gz"), recursive=True)
+    candidatas = []
+    for ruta in glob.glob(os.path.join(carpeta_sujeto, "**", "T1.nii.gz"), recursive=True):
+        zooms = nib.load(ruta).header.get_zooms()[:3]
+        if max(zooms) < 1.5:  # la T1 3D de 1 mm (las otras imágenes tienen cortes de 3 mm)
+            candidatas.append(ruta)
+    if not segmentacion or not candidatas:
+        return None, None
+    candidatas.sort(key=lambda r: 0 if "orig" in r.split(os.sep) else 1)
+    return segmentacion[0], candidatas[0]
+
+
+# Carga la T1 y la lleva a la orientación que usa nuestro código (la de OASIS):
+# ejes (posterior->anterior, inferior->superior, izquierda-derecha).
+# Devuelve también la "affine" (posición en el espacio físico) de ese arreglo, para después
+# poder llevar nuestras máscaras a la grilla de la segmentación manual.
+def cargar_t1_como_oasis(ruta):
+    imagen = nib.as_closest_canonical(nib.load(ruta))          # ejes (izq->der, post->ant, inf->sup)
+    datos = np.asarray(imagen.dataobj, dtype=np.float32)
+    datos = np.transpose(datos, (1, 2, 0))                      # -> (post->ant, inf->sup, izq->der)
+    zooms = imagen.header.get_zooms()[:3]
+    tamano_voxel = (float(zooms[1]), float(zooms[2]), float(zooms[0]))
+    affine = imagen.affine[:, [1, 2, 0, 3]]                     # mismo reordenamiento de ejes
+    return datos, tamano_voxel, affine

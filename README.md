@@ -40,13 +40,52 @@ Fuente: https://sites.wustl.edu/oasisbrains/home/oasis-2/
 3. Descargar **`training.zip`** (471 MB, 7 sujetos con segmentación manual). `test.zip` no sirve.
 4. Descomprimirlo en `Dataset/MRBrainS18/` (una carpeta por sujeto, cada una con su `segm.nii.gz`).
 
+## Estructura del código
+
+`main.py` organiza todo el flujo y llama a las funciones de la carpeta `Funciones/`, un archivo por etapa:
+
+| Módulo | Qué hace |
+|---|---|
+| `Lectura.py` | Carga de las resonancias, tamaño de vóxel, carpetas de cada visita y Excel clínico (y los datos de MRBrainS18) |
+| `Procesamiento.py` | Promediado de las adquisiciones de cada sesión, corrección de bias field (N4) y normalización de intensidad |
+| `Features.py` | Extracción del cerebro (atlas MNI152 + registro entre visitas), ventrículos laterales (atlas Harvard-Oxford) y fracción ventricular |
+| `Interpretacion.py` | Evolución del cerebro y los ventrículos entre visitas, y relación con CDR y MMSE |
+| `Validacion.py` | Concordancia con OASIS, test-retest y comparación con MRBrainS18 |
+| `Visualizacion.py` | Todas las figuras |
+| `Reporte.py` | PDF por paciente y máscaras ventriculares en NIfTI |
+| `Descarga.py` | Descarga y extracción del dataset OASIS-2 |
+
 ## Ejecución
 
 Desde la carpeta raíz del repositorio:
 
-| Script | Qué hace | Resultado |
+```bash
+python descargar_dataset.py   # una sola vez, para extraer los datos (ver "Datos")
+python main.py                # procesamiento, interpretación y validación
+```
+
+Al principio de `main.py` se elige qué partes correr:
+
+| Opción | Qué hace | Tiempo aproximado |
 |---|---|---|
-| `python main.py` | Procesa los 4 pacientes: acondicionamiento, extracción del cerebro, ventrículos y análisis longitudinal/clínico. | PDFs por paciente, `Resultados/volumenes.csv`, tablas y gráficos |
-| `python test_retest.py` | Mide el error del método comparando dos adquisiciones de la misma sesión. Correr antes `main.py`. | `Resultados/test_retest.csv` |
-| `python validar_mrbrains.py` | Compara nuestros ventrículos con la segmentación manual de MRBrainS18 (volumen y Dice). | `Resultados/validacion_mrbrains.csv` y figuras |
-| `python validar_oasis.py` | Compara nuestra tasa de atrofia con la del nWBV publicado por OASIS. Correr antes `main.py`. | `Resultados/concordancia_oasis.csv` y `Resultados/Graficos/concordancia_oasis.png` |
+| `PROCESAR_IMAGENES` | Procesa las resonancias de los 4 pacientes. Con `False` usa el `Resultados/volumenes.csv` ya generado y solo rehace interpretación y validación | ~30-40 min |
+| `VALIDAR_CONCORDANCIA_OASIS` | Compara nuestra tasa de atrofia con la del nWBV publicado por OASIS | segundos |
+| `VALIDAR_TEST_RETEST` | Mide el error del método comparando dos adquisiciones de la misma sesión (`VISITAS_TEST_RETEST` visitas por paciente) | ~2-3 min por visita |
+| `VALIDAR_MRBRAINS` | Compara nuestros ventrículos con la segmentación manual de MRBrainS18 (se saltea si no está `Dataset/MRBrainS18/`) | ~1-2 min por sujeto |
+
+## Resultados
+
+Todo queda en `Resultados/`:
+
+| Archivo | Contenido |
+|---|---|
+| `OAS2_XXXX_visitas.pdf` | Reporte de cada paciente: salida de la terminal y figuras de cada etapa |
+| `volumenes.csv` | Una fila por visita: datos clínicos, volumen de tejido, zona intracraneal, nWBV propio, ventrículos (ml) y fracción ventricular |
+| `comparacion_volumenes.csv`, `resumen_longitudinal.csv` | Evolución del volumen cerebral |
+| `comparacion_ventriculos.csv` | Evolución de los ventrículos (ml, % y fracción ventricular) |
+| `analisis_clinico_integrado.csv`, `resumen_clinico_integrado.csv` | Cambios morfológicos junto con CDR y MMSE |
+| `concordancia_oasis.csv`, `test_retest.csv`, `validacion_mrbrains.csv` | Validación del método |
+| `Graficos/` | Gráficos de evolución, fracción ventricular, comparación anatómica MR1/última visita y validación |
+| `MascarasVentriculares/` | Máscara 3D de los ventrículos de cada visita (`.nii.gz`) |
+
+**Fracción ventricular:** volumen ventricular dividido por el volumen de la zona intracraneal (en %). La zona intracraneal es la misma región en todas las visitas de un paciente, así que dentro de un paciente la fracción cambia solo si cambian los ventrículos; entre pacientes, quita el efecto del tamaño de la cabeza.

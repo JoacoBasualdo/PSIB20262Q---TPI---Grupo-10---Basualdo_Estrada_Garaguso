@@ -1,3 +1,12 @@
+# =============================================================================
+# PROCESAMIENTO (ACONDICIONAMIENTO DE LAS IMÁGENES)
+# =============================================================================
+# Prepara cada visita antes de medir:
+#   - Promediado de las 3-4 adquisiciones de la sesión (registro rígido + promedio).
+#   - Corrección de bias field (N4) y máscara de la cabeza (Otsu).
+#   - Normalización de intensidad (percentiles 1 y 99).
+# También tiene numpy_a_sitk, que usan los demás módulos para pasar a SimpleITK.
+
 import numpy as np
 # Es una libreria en C++ que desarrollaron la Biblioteca Nacional de Medicina de EE.UU. y varias universidades para el procesamiento de imágenes.
 import SimpleITK as sitk

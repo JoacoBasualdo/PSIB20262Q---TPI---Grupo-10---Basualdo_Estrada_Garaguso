@@ -1,4 +1,14 @@
+# =============================================================================
+# REPORTE
+# =============================================================================
+# Salidas del procesamiento:
+#   - PDF por paciente: guarda todo lo que se imprime en la terminal y las figuras.
+#   - Máscaras ventriculares 3D en NIfTI (.nii.gz), para abrirlas en un visor.
+
+import os
 import sys
+import numpy as np
+import nibabel as nib
 import textwrap
 from datetime import datetime
 import matplotlib.pyplot as plt
@@ -124,3 +134,63 @@ def imprimir_datos_clinicos(datos):
 
     columnas = ["MRI ID", "Visit", "MR Delay", "Age", "MMSE", "CDR", "eTIV", "nWBV", "ASF"]
     print(datos[columnas].to_string(index=False))
+
+
+# Guarda la máscara ventricular de una visita como NIfTI, con la ubicación espacial de mpr-1.
+def guardar_mascara_ventricular(
+    mascara_ventricular,
+    ruta_mri_original,
+    ruta_salida
+):
+    """Guarda la máscara binaria 3D en NIfTI comprimido (.nii.gz).
+
+    Usa la affine del primer estudio mpr de la visita, ya que el promedio
+    y la segmentación están sobre su misma grilla de vóxeles. Esto permite
+    recuperar la máscara y superponerla con esa adquisición en un visor NIfTI.
+    El archivo contiene 0 (fondo) y 1 (candidatos ventriculares).
+
+    El atlas y el registro de la segmentación siguen siendo experimentales;
+    esta función solo serializa la máscara, no valida el resultado.
+    """
+
+    mascara = np.asarray(
+        mascara_ventricular,
+        dtype=np.uint8
+    )
+
+    if mascara.ndim != 3:
+        raise ValueError(
+            "La máscara ventricular debe tener tres dimensiones"
+        )
+
+    imagen_original = nib.load(
+        str(ruta_mri_original)
+    )
+
+    if tuple(imagen_original.shape[:3]) != tuple(mascara.shape):
+        raise ValueError(
+            "La máscara y el archivo mpr de referencia no tienen la misma grilla: "
+            f"{mascara.shape} frente a {imagen_original.shape[:3]}"
+        )
+
+    cabecera = imagen_original.header.copy()
+    cabecera.set_data_dtype(np.uint8)
+    cabecera.set_data_shape(mascara.shape)
+
+    imagen_mascara = nib.Nifti1Image(
+        mascara,
+        imagen_original.affine,
+        header=cabecera
+    )
+
+    os.makedirs(
+        os.path.dirname(os.path.abspath(ruta_salida)),
+        exist_ok=True
+    )
+
+    nib.save(
+        imagen_mascara,
+        str(ruta_salida)
+    )
+
+    return ruta_salida

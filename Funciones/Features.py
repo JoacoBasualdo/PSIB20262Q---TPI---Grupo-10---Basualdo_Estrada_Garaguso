@@ -1,9 +1,19 @@
+# =============================================================================
+# EXTRACCIÓN DE FEATURES
+# =============================================================================
+# Todo lo que se MIDE en cada visita:
+#   1. Cerebro: extracción del cerebro con el atlas MNI152 (primera visita) y registro
+#      rígido entre visitas (visitas siguientes) -> tejido cerebral y zona intracraneal.
+#   2. Ventrículos laterales: atlas Harvard-Oxford + umbral de LCR + conectividad 3D.
+#   3. Fracción ventricular: ventrículos relativizados a la zona intracraneal.
+
 import os
 import numpy as np
 import nibabel as nib
 import SimpleITK as sitk
 from scipy import ndimage
-from Funciones.Acondicionamiento import numpy_a_sitk, rellenar_huecos_por_corte
+from functools import lru_cache
+from Funciones.Procesamiento import numpy_a_sitk, rellenar_huecos_por_corte
 
 
 # =============================================================================
@@ -140,7 +150,7 @@ def desenvolver(transformada, tipo):
 
 # Registro afín: busca la transformación (rotación, traslación, escala y cizallamiento,
 # 12 parámetros) que mejor superpone el atlas sobre el cerebro del paciente.
-# Es la misma idea que el registro rígido de Acondicionamiento.py (información mutua,
+# Es la misma idea que el registro rígido de Procesamiento.py (información mutua,
 # descenso por gradiente, 3 resoluciones), pero:
 #   - Afín en vez de rígido, porque cada cerebro tiene distinto tamaño y forma.
 #   - Solo se mira la zona del cerebro del paciente (máscara aproximada + 20 mm),
@@ -408,3 +418,484 @@ def mascara_cerebro_seguimiento(normalizada, mascara_cabeza, tamano_voxel, refer
     if devolver_transformada:
         return mascara_tejido, mascara_intracraneal, umbral, centros, (rotacion, traslacion, correlacion), transformada
     return mascara_tejido, mascara_intracraneal, umbral, centros, (rotacion, traslacion, correlacion)
+
+
+# =============================================================================
+# VENTRÍCULOS LATERALES
+# =============================================================================
+# Segmentación exploratoria guiada por atlas anatómico (Harvard-Oxford subcortical,
+# izquierda/derecha), proyectado al espacio de cada visita con las transformaciones del
+# registro del cerebro; umbral de LCR T1 local; conectividad 3D con semilla por hemisferio.
+
+# Margen (mm) alrededor de la etiqueta del atlas: permite expansión ventricular
+# pero evita buscar LCR en toda la cabeza.
+MARGEN_ROI_MM = 8.0
+
+# Pequeña tolerancia por volumen parcial en los límites del LCR T1.
+MARGEN_UMBRAL = 0.025
+
+
+@lru_cache(maxsize=1)
+def _atlas_ventricular_en_mni():
+    """Etiquetas laterales de Harvard-Oxford en la grilla MNI de Features.py.
+
+    El atlas se descarga/cachea una sola vez en Dataset/Atlas si falta.
+    Se remuestrea al template exacto que usa cargar_atlas() en Features.py.
+    """
+    import nibabel as nib
+    from nibabel.processing import resample_from_to
+    import nilearn
+    from nilearn.datasets import fetch_atlas_harvard_oxford
+
+    carpeta_cache = os.path.join("Dataset", "Atlas")
+
+    atlas = fetch_atlas_harvard_oxford(
+        "sub-maxprob-thr0-1mm",
+        data_dir=carpeta_cache,
+        verbose=0
+    )
+
+    imagen_atlas = atlas.maps
+
+    if isinstance(imagen_atlas, (str, os.PathLike)):
+        imagen_atlas = nib.load(str(imagen_atlas))
+
+    nombres = [
+        str(nombre).strip().lower()
+        for nombre in atlas.labels
+    ]
+
+    # El fichero original puede escribir "ventrical" en lugar de "ventricle".
+    ids = [
+        i for i, nombre in enumerate(nombres)
+        if "lateral ventri" in nombre
+    ]
+
+    if len(ids) != 2:
+        raise RuntimeError(
+            "Harvard-Oxford: no se encontraron exactamente las dos etiquetas "
+            f"ventriculares. Etiquetas disponibles: {atlas.labels}"
+        )
+
+    carpeta_nilearn = os.path.join(
+        os.path.dirname(nilearn.__file__),
+        "datasets",
+        "data"
+    )
+
+    archivo_mni = os.path.join(
+        carpeta_nilearn,
+        "mni_icbm152_t1_tal_nlin_sym_09a_converted.nii.gz"
+    )
+
+    if not os.path.isfile(archivo_mni):
+        raise FileNotFoundError(
+            f"No se encontró el MNI que utiliza Features.py: {archivo_mni}"
+        )
+
+    plantilla = nib.load(archivo_mni)
+
+    # El atlas HO y el template MNI pueden diferir en grilla y affine.
+    # Interpolación vecino más cercano para preservar IDs de etiquetas.
+    regrillado = resample_from_to(
+        imagen_atlas,
+        (plantilla.shape, plantilla.affine),
+        order=0
+    )
+
+    etiquetas = np.asarray(regrillado.dataobj)
+
+    # Mismo orden de ejes que Features.cargar_atlas: (AP, SI, LR).
+    return tuple(
+        np.transpose(etiquetas == idx, (1, 2, 0)).copy()
+        for idx in ids
+    )
+
+
+def _mascaras_atlas_en_paciente(
+    volumen,
+    tamano_voxel,
+    transformada_atlas
+):
+    """Lleva las dos etiquetas MNI al espacio de la visita actual."""
+
+    if transformada_atlas is None:
+        raise ValueError(
+            "Falta transformada_atlas: se necesita el registro de Features.py"
+        )
+
+
+    referencia = numpy_a_sitk(
+        volumen,
+        tamano_voxel
+    )
+
+    proyectadas = []
+
+    for etiqueta in _atlas_ventricular_en_mni():
+
+        etiqueta_sitk = numpy_a_sitk(
+            etiqueta.astype(np.float32),
+            (1., 1., 1.)
+        )
+
+        resultado = sitk.Resample(
+            etiqueta_sitk,
+            referencia,
+            transformada_atlas,
+            sitk.sitkNearestNeighbor,
+            0.0,
+            sitk.sitkFloat32
+        )
+
+        proyectadas.append(
+            sitk.GetArrayFromImage(resultado) > 0.5
+        )
+
+    return proyectadas
+
+
+def _roi_alrededor_de(
+    mascara_atlas,
+    tamano_voxel,
+    margen_mm
+):
+    """Dilata solo una caja pequeña alrededor de la estructura: ahorra memoria."""
+
+    roi = np.zeros(
+        mascara_atlas.shape,
+        dtype=bool
+    )
+
+    coords = np.where(mascara_atlas)
+
+    if len(coords[0]) == 0:
+        return roi
+
+    slices = []
+
+    for eje, indices in enumerate(coords):
+
+        padding = int(
+            np.ceil(margen_mm / float(tamano_voxel[eje]))
+        ) + 1
+
+        a = max(
+            0,
+            int(indices.min()) - padding
+        )
+
+        b = min(
+            roi.shape[eje],
+            int(indices.max()) + padding + 1
+        )
+
+        slices.append(slice(a, b))
+
+    slices = tuple(slices)
+
+    recorte = mascara_atlas[slices]
+
+    distancias = ndimage.distance_transform_edt(
+        ~recorte,
+        sampling=tuple(float(v) for v in tamano_voxel)
+    )
+
+    roi[slices] = distancias <= margen_mm
+
+    return roi
+
+
+def _seleccionar_regiones(
+    candidatos,
+    prior,
+    tamano_voxel
+):
+    """Conserva los componentes oscuros que contienen la semilla del atlas."""
+
+    conectividad = ndimage.generate_binary_structure(
+        3, 1
+    )  # 6 vecinos
+
+    etiquetas, n = ndimage.label(
+        candidatos,
+        structure=conectividad
+    )
+
+    mascara = np.zeros(
+        candidatos.shape,
+        dtype=bool
+    )
+
+    if n == 0:
+        return mascara, 0
+
+    solapamiento = np.bincount(
+        etiquetas[prior],
+        minlength=n + 1
+    )
+
+    solapamiento[0] = 0
+
+    principal = int(np.argmax(solapamiento))
+
+    if solapamiento[principal] < 12:
+        return mascara, 0
+
+    mascara = etiquetas == principal
+    numero = 1
+
+    # Si el LCR aparece en dos fragmentos relevantes dentro de la etiqueta
+    # del atlas, también recuperamos el segundo. No se eligen por tamaño global.
+    tamano_min_vox = max(
+        12,
+        int(np.ceil(0.2 * 1000 / np.prod(tamano_voxel)))
+    )
+
+    candidatos_secundarios = np.flatnonzero(
+        solapamiento >= max(
+            12,
+            int(0.25 * solapamiento[principal])
+        )
+    )
+
+    for idx in candidatos_secundarios:
+
+        if idx == principal or idx == 0:
+            continue
+
+        region = etiquetas == idx
+
+        if region.sum() >= tamano_min_vox:
+            mascara |= region
+            numero += 1
+
+    return mascara, numero
+
+
+# =============================================================================
+# SEGMENTACIÓN VENTRICULAR 3D
+# =============================================================================
+
+def segmentar_ventriculos(
+    normalizada,
+    mascara_intracraneal,
+    mascara_tejido,
+    umbral,
+    tamano_voxel,
+    transformada_atlas=None
+):
+    """Segmenta los ventrículos laterales con atlas + umbral + conectividad.
+
+    transformada_atlas debe mapear coordenadas de la visita actual al MNI de
+    Features.py. En MR1 es la transformada afín devuelta por mascara_cerebro;
+    en visitas posteriores, la composición actual -> MR1 -> MNI.
+
+    Devuelve (máscara bool 3D, diccionario de resultados). La máscara de tejido
+    se recibe por compatibilidad pero NO se usa como complemento directo:
+    las medidas cerebral y ventricular no deben definirse una a partir de otra.
+    """
+
+    imagen = np.asarray(
+        normalizada,
+        dtype=np.float32
+    )
+
+    intracraneal = np.asarray(
+        mascara_intracraneal,
+        dtype=bool
+    )
+
+    tejido = np.asarray(
+        mascara_tejido,
+        dtype=bool
+    )
+
+    spacing = tuple(
+        float(v) for v in tamano_voxel
+    )
+
+    if (
+        imagen.ndim != 3
+        or imagen.shape != intracraneal.shape
+        or imagen.shape != tejido.shape
+    ):
+        raise ValueError(
+            "La imagen y las máscaras deben ser 3D y tener idéntica forma"
+        )
+
+    if len(spacing) != 3 or any(v <= 0 for v in spacing):
+        raise ValueError(
+            "tamano_voxel debe ser una tupla de tres medidas positivas"
+        )
+
+    prior_izq, prior_der = _mascaras_atlas_en_paciente(
+        imagen,
+        spacing,
+        transformada_atlas
+    )
+
+    umbral_lcr = min(
+        0.30,
+        max(
+            0.08,
+            float(umbral) + MARGEN_UMBRAL
+        )
+    )
+
+    sigma = tuple(
+        0.6 / v for v in spacing
+    )  # suavizado ligero de T1
+
+    suave = ndimage.gaussian_filter(
+        imagen,
+        sigma=sigma
+    )
+
+    mascara_final = np.zeros(
+        imagen.shape,
+        dtype=bool
+    )
+
+    datos = {}
+    componentes = 0
+    calidad = []
+
+    volumen_voxel = np.prod(spacing) / 1000.0
+
+    # Planos medio-sagitales aproximados: las etiquetas del atlas se mantienen
+    # separadas para que un mismo vóxel no sea sumado a ambos ventrículos.
+    centro_izq = (
+        float(np.mean(np.where(prior_izq)[2]))
+        if prior_izq.any()
+        else np.nan
+    )
+
+    centro_der = (
+        float(np.mean(np.where(prior_der)[2]))
+        if prior_der.any()
+        else np.nan
+    )
+
+    corte_medio = (
+        centro_izq + centro_der
+    ) / 2.0
+
+    posiciones_lr = np.arange(
+        imagen.shape[2]
+    )[None, None, :]
+
+    for nombre, prior in (
+        ("izquierdo", prior_izq),
+        ("derecho", prior_der)
+    ):
+
+        if not np.any(prior):
+            datos[f"volumen_{nombre}_ml"] = np.nan
+            calidad.append("ATLAS_SIN_SOLAPAMIENTO")
+            continue
+
+        region = _roi_alrededor_de(
+            prior,
+            spacing,
+            MARGEN_ROI_MM
+        )
+
+        # Se selecciona LCR dentro del entorno del atlas y del cerebro.
+        candidatos = (
+            (suave <= umbral_lcr)
+            & region
+            & intracraneal
+        )
+
+        if np.isfinite(corte_medio):
+
+            if nombre == "izquierdo":
+
+                lado = (
+                    (posiciones_lr < corte_medio)
+                    if centro_izq < centro_der
+                    else (posiciones_lr > corte_medio)
+                )
+
+            else:
+
+                lado = (
+                    (posiciones_lr > corte_medio)
+                    if centro_izq < centro_der
+                    else (posiciones_lr < corte_medio)
+                )
+
+            candidatos &= lado
+
+        seleccion, cantidad = _seleccionar_regiones(
+            candidatos,
+            prior,
+            spacing
+        )
+
+        mascara_final |= seleccion
+        componentes += cantidad
+
+        datos[f"volumen_{nombre}_ml"] = float(
+            seleccion.sum() * volumen_voxel
+        )
+
+        if cantidad == 0:
+            calidad.append("SIN_SEMILLAS")
+
+        else:
+            cobertura = float(
+                (seleccion & prior).sum()
+                / max(prior.sum(), 1)
+            )
+
+            if cobertura < 0.12:
+                calidad.append("COBERTURA_BAJA")
+
+    volumen = float(
+        mascara_final.sum() * volumen_voxel
+    )
+
+    if calidad:
+        estado = "REVISAR_REGISTRO_O_SEGMENTACION"
+
+    elif volumen < 2.0 or volumen > 120.0:
+        estado = "REVISAR_VOLUMEN"
+
+    else:
+        estado = "REVISAR_MASCARA"
+
+    # No reportar como volumen válido si no localizó alguna de las estructuras.
+    if any(
+        q in ("ATLAS_SIN_SOLAPAMIENTO", "SIN_SEMILLAS")
+        for q in calidad
+    ):
+        volumen = np.nan
+
+    info = {
+        "volumen_ml": volumen,
+        "estado": estado,
+        "componentes": componentes,
+        "umbral_utilizado": umbral_lcr,
+        "metodo": "Harvard-Oxford + umbral T1 + componentes 3D",
+        **datos,
+    }
+
+    return mascara_final, info
+
+
+# =============================================================================
+# FRACCIÓN VENTRICULAR (VENTRÍCULOS RELATIVIZADOS AL CRÁNEO)
+# =============================================================================
+# Volumen ventricular dividido por el volumen de la zona intracraneal, en %.
+# La zona intracraneal es la misma región física en todas las visitas de un paciente
+# (se lleva desde la primera visita con el registro rígido), así que el denominador es
+# constante: dentro de un paciente, la fracción cambia solo si cambian los ventrículos.
+# Entre pacientes, quita el efecto del tamaño de la cabeza (una cabeza más grande tiene
+# ventrículos más grandes aunque no haya atrofia), igual que el nWBV para el cerebro.
+# Al ser un cociente de dos volúmenes, no tiene unidades ni depende del tamaño del vóxel.
+def fraccion_ventricular(volumen_ventricular_ml, volumen_intracraneal_ml):
+    if not np.isfinite(volumen_ventricular_ml) or volumen_intracraneal_ml <= 0:
+        return np.nan
+    return 100.0 * volumen_ventricular_ml / volumen_intracraneal_ml

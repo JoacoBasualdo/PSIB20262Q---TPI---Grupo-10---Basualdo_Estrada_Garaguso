@@ -41,16 +41,32 @@
 # El paciente 127 tuvo 5 visitas a lo largo de 7 años. Ingreso con sano y a partir de la seguna sesion tenia demencia muy leve
 # El paciente 87 entro con 1.0 de demencia y aumento a 2.0 en solo 2 años.
 
+# =============================================================================
+# ESTRUCTURA DEL CÓDIGO (carpeta Funciones/)
+# =============================================================================
+#   Lectura.py         carga de imágenes, tamaño de vóxel, Excel clínico (y MRBrainS18)
+#   Procesamiento.py   promediado de adquisiciones, corrección de bias (N4), normalización
+#   Features.py        extracción del cerebro, registro entre visitas, ventrículos, fracción ventricular
+#   Interpretacion.py  evolución en el tiempo de cerebro y ventrículos, relación con CDR/MMSE
+#   Validacion.py      concordancia con OASIS, test-retest y comparación con MRBrainS18
+#   Visualizacion.py   todas las figuras
+#   Reporte.py         PDF por paciente y máscaras ventriculares en NIfTI
+#   Descarga.py        descarga/extracción del dataset (se corre aparte: python descargar_dataset.py)
+
 import os
 import numpy as np
 import pandas as pd
+import SimpleITK as sitk
 from Funciones.Lectura import cargar_datos_clinicos, buscar_carpeta_visita, listar_adquisiciones, leer_tamano_voxel, cargar_volumen_nifti
-from Funciones.Acondicionamiento import promediar_adquisiciones, filtro_mediana, corregir_bias_field, normalizar_intensidad
-from Funciones.Visualizacion import visualizar_planos_ortogonales, graficar_histogramas_visitas, visualizar_mascaras, graficar_histograma_umbral
-from Funciones.Features import mascara_cerebro, mascara_cerebro_seguimiento, volumen_ml
-from Funciones.AnalisisLongitudinal import calcular_evolucion, resumir_pacientes, guardar_graficos_evolucion
-from Funciones.SegmentacionVentricular import segmentar_ventriculos, calcular_cambios_ventriculares, visualizar_ventriculos, graficar_evolucion_ventricular, guardar_mascara_ventricular, visualizar_comparacion_ventricular
-from Funciones.AnalisisClinico import analizar_evolucion_clinica
+from Funciones.Procesamiento import promediar_adquisiciones, filtro_mediana, corregir_bias_field, normalizar_intensidad
+from Funciones.Features import mascara_cerebro, mascara_cerebro_seguimiento, volumen_ml, segmentar_ventriculos, fraccion_ventricular
+from Funciones.Interpretacion import calcular_evolucion, resumir_pacientes, calcular_cambios_ventriculares, analizar_evolucion_clinica
+from Funciones.Validacion import (concordancia_oasis, imprimir_concordancia_oasis, test_retest, imprimir_test_retest,
+                                  validacion_mrbrains, imprimir_validacion_mrbrains)
+from Funciones.Visualizacion import (visualizar_planos_ortogonales, graficar_histogramas_visitas, visualizar_mascaras,
+                                     graficar_histograma_umbral, visualizar_ventriculos, visualizar_comparacion_ventricular,
+                                     guardar_graficos_evolucion, graficar_evolucion_ventricular, graficar_fraccion_ventricular,
+                                     graficar_analisis_clinico, graficar_concordancia_oasis)
 from Funciones import Reporte
 
 RUTA_DATASET = "Dataset"
@@ -61,8 +77,20 @@ CANTIDAD_VISITAS = 5
 # Pacientes a procesar (ver la descripción de cada uno en los comentarios de arriba)
 PACIENTES = ["OAS2_0070", "OAS2_0048", "OAS2_0087", "OAS2_0127"]
 
-# Tabla con una fila por visita: es lo que se usa después para el análisis (AnalisisFinal.py)
+# Tabla con una fila por visita: es lo que se usa después para la interpretación y la validación
 RUTA_CSV = os.path.join(RUTA_RESULTADOS, "volumenes.csv")
+RUTA_GRAFICOS = os.path.join(RUTA_RESULTADOS, "Graficos")
+
+# ---- Qué partes correr ----
+# PROCESAR_IMAGENES: si es False, no procesa las resonancias y usa el volumenes.csv ya
+# generado (sirve para rehacer solo la interpretación y la validación, en segundos).
+PROCESAR_IMAGENES = True
+# Validaciones (ver Funciones/Validacion.py):
+VALIDAR_CONCORDANCIA_OASIS = True   # segundos
+VALIDAR_TEST_RETEST = True          # ~2-3 min por visita (VISITAS_TEST_RETEST por paciente)
+VALIDAR_MRBRAINS = True             # ~1-2 min por sujeto; se saltea si no está Dataset/MRBrainS18
+VISITAS_TEST_RETEST = 2
+RUTA_MRBRAINS = os.path.join(RUTA_DATASET, "MRBrainS18")
 
 
 # Procesa todas las visitas de un paciente: acondicionamiento, extracción del cerebro y
@@ -185,7 +213,6 @@ def procesar_paciente(paciente_id):
                 normalizada, mascara, tamano_voxel, referencia, normalizada_1, mascara_1,
                 devolver_transformada=True
             )
-            import SimpleITK as sitk
             transformada_atlas = sitk.CompositeTransform([
                 referencia["transformada_atlas"], transformada_visitas
             ])
@@ -204,8 +231,11 @@ def procesar_paciente(paciente_id):
             transformada_atlas=transformada_atlas
         )
         volumen_ventricular = info_ventricular["volumen_ml"]
+        # Ventrículos relativizados a la zona intracraneal (misma región en todas las visitas)
+        fraccion_vent = fraccion_ventricular(volumen_ventricular, volumen_intracraneal)
         print(f"  Volumen ventricular estimado: {volumen_ventricular:.1f} ml "
               f"({info_ventricular['estado']})")
+        print(f"  Fracción ventricular (ventrículos / zona intracraneal): {fraccion_vent:.3f}%")
 
         # Guardar la máscara binaria de cada visita en formato NIfTI 3D.
         # Se usa la affine de mpr-1: la segmentación tiene la misma grilla.
@@ -213,7 +243,7 @@ def procesar_paciente(paciente_id):
             RUTA_RESULTADOS, "MascarasVentriculares", paciente_id,
             f"{mri_id}_ventriculos.nii.gz"
         )
-        guardar_mascara_ventricular(
+        Reporte.guardar_mascara_ventricular(
             mascara_ventricular, rutas[0], ruta_mascara_ventricular
         )
         print(f"  Máscara 3D guardada en: {ruta_mascara_ventricular}")
@@ -274,6 +304,7 @@ def procesar_paciente(paciente_id):
             "volumen_ventricular_ml": round(volumen_ventricular, 2),
             "volumen_ventriculo_izquierdo_ml": round(info_ventricular.get("volumen_izquierdo_ml", np.nan), 2),
             "volumen_ventriculo_derecho_ml": round(info_ventricular.get("volumen_derecho_ml", np.nan), 2),
+            "fraccion_ventricular_pct": round(fraccion_vent, 3),
             "estado_ventricular": info_ventricular["estado"],
             "ruta_mascara_ventricular": ruta_mascara_ventricular,
             "umbral_tejido": round(float(umbral), 4),
@@ -376,21 +407,20 @@ def procesar_paciente(paciente_id):
 
 # Procesa todos los pacientes. El CSV se guarda después de cada paciente, así si algo
 # falla a mitad de camino no se pierde lo que ya se calculó.
-def main():
-    os.makedirs(RUTA_RESULTADOS, exist_ok=True)
+def procesar_todos():
     todas_las_filas = []
     for paciente_id in PACIENTES:
         print(f"\n########## {paciente_id} ##########")
         todas_las_filas += procesar_paciente(paciente_id)
         pd.DataFrame(todas_las_filas).to_csv(RUTA_CSV, index=False)
         print(f"Tabla actualizada: {RUTA_CSV}")
+    return pd.DataFrame(todas_las_filas)
 
-    # Análisis longitudinal de los volúmenes cerebrales entre visitas.
-    if not todas_las_filas:
-        print("No se procesó ninguna visita; se omite el análisis longitudinal.")
-        return
 
-    evolucion = calcular_evolucion(pd.DataFrame(todas_las_filas))
+# Interpretación: evolución del cerebro, de los ventrículos y relación con la clínica
+def interpretar(datos):
+    # Volumen cerebral entre visitas
+    evolucion = calcular_evolucion(datos)
     resumen = resumir_pacientes(evolucion)
 
     ruta_comparacion = os.path.join(RUTA_RESULTADOS, "comparacion_volumenes.csv")
@@ -400,32 +430,83 @@ def main():
     print(f"Comparación longitudinal guardada en: {ruta_comparacion}")
     print(f"Resumen longitudinal guardado en: {ruta_resumen}")
 
-    carpeta_graficos = os.path.join(RUTA_RESULTADOS, "Graficos")
-    rutas_graficos = guardar_graficos_evolucion(evolucion, carpeta_graficos)
-    for ruta in rutas_graficos:
+    for ruta in guardar_graficos_evolucion(evolucion, RUTA_GRAFICOS):
         print(f"Gráfico guardado en: {ruta}")
 
-    # Comparación longitudinal de los volúmenes ventriculares.
-    ventriculos = calcular_cambios_ventriculares(pd.DataFrame(todas_las_filas))
+    # Ventrículos entre visitas (en ml, % y fracción ventricular)
+    ventriculos = calcular_cambios_ventriculares(datos)
     ruta_ventriculos = os.path.join(RUTA_RESULTADOS, "comparacion_ventriculos.csv")
     ventriculos.to_csv(ruta_ventriculos, index=False)
     print(f"Comparación ventricular guardada en: {ruta_ventriculos}")
-    for ruta in graficar_evolucion_ventricular(ventriculos, carpeta_graficos):
+    for ruta in graficar_evolucion_ventricular(ventriculos, RUTA_GRAFICOS):
         print(f"Gráfico ventricular guardado en: {ruta}")
+    if "fraccion_ventricular_pct" in datos.columns:
+        ruta = graficar_fraccion_ventricular(datos, os.path.join(RUTA_GRAFICOS, "fraccion_ventricular_pacientes.png"))
+        print(f"Gráfico de fracción ventricular guardado en: {ruta}")
 
     # Análisis morfológico-clínico: compara volúmenes, nWBV, CDR y MMSE.
-    # Se ejecuta sobre la tabla ya calculada, sin repetir el procesamiento MRI.
-    detalle_clinico, resumen_clinico, graficos_clinicos = analizar_evolucion_clinica(
-        pd.DataFrame(todas_las_filas), RUTA_RESULTADOS
-    )
+    detalle_clinico, resumen_clinico = analizar_evolucion_clinica(datos)
+    detalle_clinico.to_csv(os.path.join(RUTA_RESULTADOS, "analisis_clinico_integrado.csv"), index=False)
+    resumen_clinico.to_csv(os.path.join(RUTA_RESULTADOS, "resumen_clinico_integrado.csv"), index=False)
     print("\n========== ANÁLISIS MORFOLÓGICO-CLÍNICO ==========")
-    print(resumen_clinico[[
-        "paciente", "cambio_cerebral_pct", "cambio_ventricular_pct",
-        "cambio_cdr", "cambio_mmse_puntos"
-    ]].to_string(index=False))
+    columnas = ["paciente", "cambio_cerebral_pct", "cambio_ventricular_pct",
+                "fraccion_ventricular_inicial_pct", "fraccion_ventricular_final_pct",
+                "cambio_cdr", "cambio_mmse_puntos"]
+    print(resumen_clinico[[c for c in columnas if c in resumen_clinico.columns]].to_string(index=False))
     print("Tablas guardadas en Resultados/ (analisis_clinico_integrado.csv y resumen_clinico_integrado.csv)")
-    for ruta in graficos_clinicos:
+    for ruta in graficar_analisis_clinico(detalle_clinico, RUTA_GRAFICOS):
         print(f"Gráfico clínico guardado en: {ruta}")
+
+
+# Validación del método (ver Funciones/Validacion.py)
+def validar(datos):
+    if VALIDAR_CONCORDANCIA_OASIS:
+        tabla, correlacion_global = concordancia_oasis(datos)
+        ruta = os.path.join(RUTA_RESULTADOS, "concordancia_oasis.csv")
+        tabla.to_csv(ruta, index=False)
+        imprimir_concordancia_oasis(tabla, correlacion_global)
+        graficar_concordancia_oasis(datos, os.path.join(RUTA_GRAFICOS, "concordancia_oasis.png"))
+        print(f"Tabla guardada en: {ruta}")
+
+    if VALIDAR_TEST_RETEST:
+        ruta = os.path.join(RUTA_RESULTADOS, "test_retest.csv")
+        tabla = test_retest(PACIENTES, RUTA_DATASET, RUTA_DATOS_CLINICOS, VISITAS_TEST_RETEST, ruta_csv=ruta)
+        if tabla is None:
+            print("\nTest-retest: no se encontraron visitas con 2 o más adquisiciones.")
+        else:
+            imprimir_test_retest(tabla, datos)
+            print(f"Tabla guardada en: {ruta}")
+
+    if VALIDAR_MRBRAINS:
+        ruta = os.path.join(RUTA_RESULTADOS, "validacion_mrbrains.csv")
+        carpeta_figuras = os.path.join(RUTA_GRAFICOS, "ValidacionMRBrainS")
+        tabla = validacion_mrbrains(RUTA_MRBRAINS, carpeta_figuras, ruta_csv=ruta)
+        if tabla is None:
+            print(f"\nMRBrainS18: no se encontraron sujetos en {RUTA_MRBRAINS} (ver README). Se saltea.")
+        else:
+            imprimir_validacion_mrbrains(tabla)
+            print(f"Tabla guardada en: {ruta}")
+            print(f"Figuras de control en: {carpeta_figuras}")
+
+
+def main():
+    os.makedirs(RUTA_RESULTADOS, exist_ok=True)
+
+    if PROCESAR_IMAGENES:
+        datos = procesar_todos()
+    elif os.path.exists(RUTA_CSV):
+        print(f"PROCESAR_IMAGENES = False: se usa la tabla existente {RUTA_CSV}")
+        datos = pd.read_csv(RUTA_CSV)
+    else:
+        print(f"PROCESAR_IMAGENES = False pero no existe {RUTA_CSV}. Correr primero con True.")
+        return
+
+    if datos.empty:
+        print("No se procesó ninguna visita; se omiten la interpretación y la validación.")
+        return
+
+    interpretar(datos)
+    validar(datos)
 
 
 if __name__ == "__main__":
