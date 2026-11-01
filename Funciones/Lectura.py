@@ -79,3 +79,32 @@ def cargar_t1_como_oasis(ruta):
     tamano_voxel = (float(zooms[1]), float(zooms[2]), float(zooms[0]))
     affine = imagen.affine[:, [1, 2, 0, 3]]                     # mismo reordenamiento de ejes
     return datos, tamano_voxel, affine
+
+
+# Lista los pacientes que tienen al menos una visita extraída en el Dataset, con sus datos
+# del Excel clínico. La usa la interfaz para armar el selector de pacientes.
+def listar_pacientes(ruta_dataset, ruta_datos_clinicos):
+    if not os.path.exists(ruta_datos_clinicos):
+        return {}
+
+    en_disco = {}
+    for carpeta in glob.glob(os.path.join(ruta_dataset, "OAS2_RAW_PART*", "OAS2_*_MR*", "RAW")):
+        mri_id = os.path.basename(os.path.dirname(carpeta))
+        en_disco.setdefault(mri_id.split("_MR")[0], set()).add(mri_id)
+
+    datos = pd.read_excel(ruta_datos_clinicos)
+    pacientes = {}
+    for paciente_id in sorted(en_disco):
+        filas = datos[datos["Subject ID"] == paciente_id].sort_values("Visit")
+        if filas.empty:
+            continue
+        pacientes[paciente_id] = {
+            "grupo": filas["Group"].iloc[0],
+            "visitas_excel": len(filas),
+            "visitas_en_disco": int(filas["MRI ID"].isin(en_disco[paciente_id]).sum()),
+            "edad_inicial": int(filas["Age"].iloc[0]),
+            "edad_final": int(filas["Age"].iloc[-1]),
+            "cdr": filas["CDR"].tolist(),
+            "mmse": filas["MMSE"].tolist(),
+        }
+    return pacientes
