@@ -432,11 +432,15 @@ def visualizar_comparacion_ventricular(
 
 # ----------------------------- EVOLUCIÓN -----------------------------
 
-# Un gráfico por paciente: cambio del volumen cerebral propio y del nWBV de OASIS desde MR1.
+# Un gráfico por paciente: variación del nWBV propio y del de OASIS desde MR1, con la recta de regresión de cada uno.
 def guardar_graficos_evolucion(evolucion, carpeta_salida):
     """
-    Genera un gráfico por paciente mostrando los cambios
-    relativos del volumen cerebral y del nWBV de OASIS-2.
+    Genera un gráfico por paciente con el nWBV propio y el de OASIS-2, expresados como
+    variación respecto de la primera visita (%). Se compara la MISMA medida (tejido /
+    volumen intracraneal) en ambos métodos. Además de los puntos de cada visita, se
+    dibuja la recta de regresión de cada método, cuya pendiente es la tasa de atrofia
+    que se reporta: así se ve que la conclusión depende de la tendencia de todas las
+    visitas y no de un punto aislado.
     """
 
     os.makedirs(carpeta_salida, exist_ok=True)
@@ -446,98 +450,48 @@ def guardar_graficos_evolucion(evolucion, carpeta_salida):
     for paciente, grupo in evolucion.groupby("paciente"):
 
         grupo = grupo.sort_values("anios_desde_primera")
+        tiempo = grupo["anios_desde_primera"].to_numpy(dtype=float)
 
-        tiempo = grupo["anios_desde_primera"]
-
-        cambio_volumen = grupo["cambio_desde_inicio_pct"]
-
-        cambio_oasis = grupo["cambio_relativo_nwbv_oasis_pct"]
-
-        # ----------------------------------------------------
-        # CREACIÓN DEL GRÁFICO
-        # ----------------------------------------------------
+        # Variación del nWBV respecto de la primera visita, en %
+        propio = 100 * (grupo["nwbv_propio"] / grupo["nwbv_propio"].iloc[0] - 1)
+        oasis = 100 * (grupo["nwbv_oasis"] / grupo["nwbv_oasis"].iloc[0] - 1)
 
         fig, ax = plt.subplots(figsize=(9, 5))
 
-        ax.plot(
-            tiempo,
-            cambio_volumen,
-            marker="o",
-            linewidth=2,
-            label="Volumen cerebral calculado (%)"
-        )
+        series = [
+            (propio.to_numpy(dtype=float), "Método propio", "tab:blue", "o"),
+            (oasis.to_numpy(dtype=float), "OASIS-2", "tab:orange", "s"),
+        ]
 
-        ax.plot(
-            tiempo,
-            cambio_oasis,
-            marker="s",
-            linestyle="--",
-            linewidth=2,
-            label="nWBV OASIS-2 (%)"
-        )
+        for valores, nombre, color, marcador in series:
+            texto = nombre
+            if len(tiempo) >= 2:
+                # Recta de regresión: su pendiente es la tasa de atrofia (% por año)
+                pendiente, ordenada = np.polyfit(tiempo, valores, 1)
+                texto = f"{nombre}: {pendiente:+.2f} %/año"
+                ax.plot(tiempo, pendiente * tiempo + ordenada, color=color,
+                        linewidth=2, linestyle="--", alpha=0.8)
+            # Visitas: puntos unidos por una línea fina
+            ax.plot(tiempo, valores, color=color, marker=marcador, linewidth=1,
+                    alpha=0.6, label=texto)
 
         # Línea de referencia: primera visita
-        ax.axhline(
-            y=0,
-            linestyle=":",
-            color="gray",
-            linewidth=1
-        )
+        ax.axhline(y=0, linestyle=":", color="gray", linewidth=1)
 
-        # ----------------------------------------------------
-        # IDENTIFICACIÓN DE LAS VISITAS
-        # ----------------------------------------------------
+        # Identificación de las visitas (sobre la curva propia)
+        for t, v, visita in zip(tiempo, propio, grupo["visita"]):
+            ax.annotate(f"MR{int(visita)}", (t, v), xytext=(5, 8),
+                        textcoords="offset points", fontsize=9)
 
-        for _, fila in grupo.iterrows():
-
-            ax.annotate(
-                f"MR{int(fila['visita'])}",
-                (
-                    fila["anios_desde_primera"],
-                    fila["cambio_desde_inicio_pct"]
-                ),
-                xytext=(5, 8),
-                textcoords="offset points",
-                fontsize=9
-            )
-
-        # ----------------------------------------------------
-        # FORMATO DEL GRÁFICO
-        # ----------------------------------------------------
-
-        ax.set_title(
-            f"Evolución del volumen cerebral - {paciente}"
-        )
-
-        ax.set_xlabel(
-            "Años desde la primera visita"
-        )
-
-        ax.set_ylabel(
-            "Variación respecto de la primera visita (%)"
-        )
-
+        ax.set_title(f"Evolución del nWBV - {paciente}")
+        ax.set_xlabel("Años desde la primera visita")
+        ax.set_ylabel("Variación del nWBV respecto de la primera visita (%)")
         ax.grid(alpha=0.3)
-
-        ax.legend()
-
+        ax.legend(title="Línea punteada: regresión (tasa de atrofia)", fontsize=9, title_fontsize=9)
         fig.tight_layout()
 
-        # ----------------------------------------------------
-        # GUARDAR EN RESULTADOS
-        # ----------------------------------------------------
-
-        ruta = os.path.join(
-            carpeta_salida,
-            f"evolucion_{paciente}.png"
-        )
-
-        fig.savefig(
-            ruta,
-            dpi=180,
-            bbox_inches="tight"
-        )
-
+        ruta = os.path.join(carpeta_salida, f"evolucion_{paciente}.png")
+        fig.savefig(ruta, dpi=180, bbox_inches="tight")
         plt.close(fig)
 
         rutas_guardadas.append(ruta)

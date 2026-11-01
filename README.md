@@ -44,7 +44,7 @@ Después se analiza cómo cambian esas medidas entre visitas y se relacionan con
 ## Requisitos
 
 - **Python 3.10 o superior.**
-- Las bibliotecas de `requirements.txt`: `nibabel`, `numpy`, `matplotlib`, `SimpleITK`, `pandas`, `openpyxl`, `scipy` y `nilearn`.
+- Las bibliotecas de `requirements.txt`: `nibabel`, `numpy`, `matplotlib`, `SimpleITK`, `pandas`, `openpyxl`, `scipy`, `nilearn` y `PySide6` (esta última solo para la interfaz gráfica).
 - **Espacio en disco:** ~19 GB para descargar los dos `.tar.gz` de OASIS-2. Una vez extraídos los 4 pacientes, los `.tar.gz` se pueden borrar: los datos que usa el código ocupan mucho menos.
 - **Internet:** para descargar los datos y, la primera vez que se corre `main.py`, el atlas Harvard-Oxford.
 - **[aria2](https://aria2.github.io/)** (recomendado): descarga los archivos grandes en paralelo y retoma la descarga si se corta.
@@ -152,8 +152,35 @@ Desde la carpeta raíz del repositorio:
 
 ```bash
 python descargar_dataset.py   # una sola vez, para extraer los datos
-python main.py                # procesamiento, interpretación y validación
+python main.py                # los 4 pacientes: procesamiento, interpretación y validación
+python Interfaz/App.py        # interfaz gráfica: un paciente por vez
 ```
+
+Hay dos formas de correr el procesamiento:
+
+| | `main.py` | Interfaz gráfica (`Interfaz/App.py`) |
+|---|---|---|
+| Pacientes | Los 4 juntos (lista `PACIENTES`) | Uno por vez, elegido de una lista |
+| Opciones | Se cambian editando las constantes al principio de `main.py` | Se eligen en la ventana |
+| Resultados | `Resultados/` (CSV, gráficos y un PDF por paciente) | `Resultados/Interfaz/<paciente>/`, sin pisar los de `main.py`; el PDF se guarda con un botón |
+| Para qué | Generar los resultados completos del trabajo | Explorar un paciente y ver cada etapa |
+
+### Interfaz gráfica (NeuroVol)
+
+```bash
+python Interfaz/App.py
+```
+
+Se puede correr desde cualquier carpeta: el programa se ubica solo en la raíz del repo. Necesita que el dataset ya esté extraído (paso 2 de [Datos](#datos-qué-descargar-y-dónde-ponerlo)).
+
+1. **Paciente**: se elige de la lista. Solo aparecen los pacientes que tienen visitas extraídas en `Dataset/`. Al elegir uno se muestran su grupo, sus edades y la evolución del CDR y el MMSE.
+2. **Visitas a procesar**: cuántas visitas del paciente se procesan, empezando por la primera.
+3. **Validación**: casillas para la concordancia con OASIS (necesita al menos 2 visitas), el test-retest y MRBrainS18 (se deshabilita si no está descargado). En **opciones avanzadas** se elige cuántas visitas usar en el test-retest.
+4. **Ejecutar**: el procesamiento corre en segundo plano y una barra muestra el avance por visita y por etapa.
+5. **Resultados**: aparecen en pestañas, una por etapa (Lectura, Procesamiento, Features, Interpretación y Validación), con los textos y las figuras de cada visita. La pestaña **Consola** muestra todo lo que se imprimió.
+6. **Guardar PDF** genera el reporte con todo lo que se muestra en las pestañas, y **Abrir carpeta de resultados** abre `Resultados/Interfaz/<paciente>/`.
+
+Procesar un paciente con 5 visitas tarda unos 8-10 minutos (más si se activan el test-retest o MRBrainS18).
 
 ### Opciones de `main.py`
 
@@ -203,9 +230,19 @@ Después de procesar a todos los pacientes:
 ├── descargar_dataset.py    Extrae los pacientes de OASIS-2 (llama a Funciones/Descarga.py)
 ├── requirements.txt
 ├── Funciones/              Un archivo por etapa
+├── Interfaz/               Interfaz gráfica (PySide6)
 ├── Resultados/             CSV, gráficos, PDFs y máscaras generados
 └── Informe/                Informe en LaTeX y PDF
 ```
+
+| Archivo de `Interfaz/` | Qué hace |
+|---|---|
+| `App.py` | Ventana principal: encabezado, panel de parámetros, barra de progreso, pestañas de resultados y botones para guardar el PDF y abrir la carpeta. Se ejecuta con `python Interfaz/App.py` |
+| `Panel_parametros.py` | Panel izquierdo: paciente, visitas, validaciones y opciones avanzadas. Controla que los parámetros sean válidos antes de ejecutar |
+| `Trabajador.py` | Corre `ejecutar_pipeline` de `main.py` en otro hilo, para que la ventana no se congele, y le manda a la ventana el texto, el avance y los resultados |
+| `Vista_resultados.py` | Arma cada pestaña de resultados con sus subtítulos, textos e imágenes |
+| `Estilo.py` | Colores, tipografías y nombre de la aplicación |
+| `recursos/` | Logo del ITBA e íconos |
 
 | Módulo | Qué hace |
 |---|---|
@@ -224,11 +261,14 @@ Después de procesar a todos los pacientes:
 #### `main.py`
 | Función | Qué hace |
 |---|---|
-| `procesar_paciente(paciente_id)` | Procesa todas las visitas de un paciente, genera su PDF y devuelve una fila por visita |
+| `procesar_paciente(paciente_id, cantidad_visitas, guardar_pdf)` | Procesa las visitas de un paciente, genera su PDF (si `guardar_pdf`) y devuelve una fila por visita |
 | `procesar_todos()` | Procesa los pacientes de `PACIENTES` y guarda `volumenes.csv` después de cada uno |
-| `interpretar(datos)` | Evolución del cerebro, de los ventrículos y relación con la clínica (CSV y gráficos) |
-| `validar(datos)` | Corre las validaciones activadas en las opciones |
+| `interpretar(datos, carpeta_resultados, ...)` | Evolución del cerebro, de los ventrículos y relación con la clínica (CSV y gráficos) |
+| `validar(datos, carpeta_resultados, ...)` | Corre las validaciones elegidas (por defecto, las activadas en las opciones) |
+| `ejecutar_pipeline(paciente_id, ...)` | Procesa, interpreta y valida UN paciente y guarda en `Resultados/Interfaz/<paciente>/`. Es lo que corre la interfaz |
 | `main()` | Punto de entrada: procesa (o lee el CSV), interpreta y valida |
+
+`ETAPAS` define las cinco etapas (Lectura, Procesamiento, Features, Interpretación y Validación). Cada texto y figura queda marcado con su etapa, y la interfaz muestra una pestaña por cada una.
 
 #### `Lectura.py`
 | Función | Qué hace |
@@ -238,6 +278,7 @@ Después de procesar a todos los pacientes:
 | `listar_adquisiciones(carpeta_raw)` | Lista las adquisiciones de una visita, con `mpr-1` primero |
 | `cargar_datos_clinicos(ruta_xlsx, paciente_id)` | Filas del Excel de OASIS de un paciente |
 | `buscar_carpeta_visita(ruta_dataset, mri_id)` | Busca la carpeta `RAW` de una visita en `OAS2_RAW_PART1` y `PART2` |
+| `listar_pacientes(ruta_dataset, ruta_datos_clinicos)` | Pacientes con visitas extraídas en `Dataset/`, con sus datos clínicos (arma la lista de la interfaz) |
 | `buscar_archivos_mrbrains(carpeta_sujeto)` | Segmentación manual y T1 de 1 mm de un sujeto de MRBrainS18 |
 | `cargar_t1_como_oasis(ruta)` | Carga la T1 de MRBrainS18 en la orientación que usa el código |
 
@@ -310,6 +351,11 @@ Después de procesar a todos los pacientes:
 | Función | Qué hace |
 |---|---|
 | `iniciar_registro`, `agregar_subtitulo`, `agregar_figura` | Van juntando el texto de la terminal y las figuras de un paciente |
+| `agregar_imagen(ruta)` | Agrega al reporte un gráfico ya guardado como imagen |
+| `marcar_etapa(nombre)` | Marca con esa etapa todo lo que se imprima o agregue desde ese momento |
+| `al_cambiar_etapa(funcion)` | Avisa a la interfaz cada vez que cambia la etapa (para la barra de progreso) |
+| `cambiar_consola(nueva)` | Manda lo que se imprime a otro destino (la consola de la interfaz) |
+| `elementos_por_etapa(etapas)` | Agrupa textos y figuras por etapa, para las pestañas de la interfaz |
 | `guardar_pdf(ruta_pdf, titulo)` | Arma el PDF del paciente |
 | `imprimir_datos_clinicos(datos)` | Muestra la tabla clínica del paciente |
 | `guardar_mascara_ventricular(...)` | Guarda la máscara ventricular en NIfTI, con la ubicación espacial de `mpr-1` |
@@ -344,6 +390,7 @@ Todo queda en `Resultados/`:
 | `Graficos/ComparacionAnatomica/` | Primera y última visita de cada paciente sobre los mismos cortes |
 | `Graficos/ValidacionMRBrainS/` | Contorno manual contra el nuestro para cada sujeto de MRBrainS18 |
 | `MascarasVentriculares/OAS2_XXXX/` | Máscara 3D de los ventrículos de cada visita (`.nii.gz`); se puede abrir en ITK-SNAP, 3D Slicer o FSLeyes junto con `mpr-1` |
+| `Interfaz/OAS2_XXXX/` | Resultados de la interfaz gráfica para ese paciente: las mismas tablas y gráficos, pero de un solo paciente |
 
 **Fracción ventricular:** volumen ventricular dividido por el volumen de la zona intracraneal, en %. La zona intracraneal es la misma región en todas las visitas de un paciente: dentro de un paciente, la fracción cambia solo si cambian los ventrículos; entre pacientes, quita el efecto del tamaño de la cabeza.
 
@@ -371,6 +418,9 @@ Todo queda en `Resultados/`:
 | Error al descargar el atlas Harvard-Oxford | Hace falta internet la primera vez que se corre `main.py`. Si queda una descarga a medias, borrar `Dataset/Atlas/` y volver a correr |
 | `MRBrainS18: no se encontraron sujetos` | Es solo un aviso: falta `Dataset/MRBrainS18/` (paso 3). El resto se ejecuta igual |
 | `PROCESAR_IMAGENES = False pero no existe Resultados/volumenes.csv` | Correr una vez con `PROCESAR_IMAGENES = True` |
+| `ModuleNotFoundError: No module named 'PySide6'` | Instalar las dependencias de nuevo: `pip install -r requirements.txt` |
+| La interfaz dice que no se encontraron pacientes | Falta extraer el dataset: correr `python descargar_dataset.py` (paso 2) |
+| Al guardar el PDF desde la interfaz dice que no se pudo escribir | El PDF está abierto en otro programa: cerrarlo y volver a guardar |
 | Los volúmenes cambian levemente entre corridas | Es el registro multihilo de SimpleITK (~1%); ver [Ejecución](#ejecución) |
 
 ---
