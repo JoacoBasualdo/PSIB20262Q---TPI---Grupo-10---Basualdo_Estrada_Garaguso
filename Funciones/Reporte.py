@@ -4,6 +4,9 @@
 # Salidas del procesamiento:
 #   - PDF por paciente: guarda todo lo que se imprime en la terminal y las figuras.
 #   - Máscaras ventriculares 3D en NIfTI (.nii.gz), para abrirlas en un visor.
+#   - Etapas: cada texto y figura queda marcado con la etapa del pipeline en la que se
+#     generó (Lectura, Procesamiento, ...). La interfaz usa esa marca para mostrar los
+#     resultados en una pestaña por etapa; el PDF no cambia.
 
 import os
 import sys
@@ -24,8 +27,12 @@ MARGEN_IZQUIERDO = 0.06
 ALTO_LINEA = 0.013
 
 _elementos = []
+_etiquetas = []          # etapa de cada elemento de _elementos (misma longitud)
 _texto_actual = []
 _consola = sys.stdout
+_etapa_actual = None
+_subtitulo_actual = None
+_aviso_etapa = None      # función que se llama cada vez que cambia la etapa (la usa la interfaz)
 
 
 class _Duplicador:
@@ -40,28 +47,95 @@ class _Duplicador:
         return getattr(_consola, nombre)
 
 
+def _agregar(tipo, contenido):
+    _elementos.append((tipo, contenido))
+    _etiquetas.append(_etapa_actual)
+
+
 def _cerrar_texto():
     texto = "".join(_texto_actual).strip("\n")
     if texto:
-        _elementos.append(("texto", texto))
+        _agregar("texto", texto)
     _texto_actual.clear()
 
 
 def iniciar_registro():
+    global _etapa_actual, _subtitulo_actual
     _elementos.clear()
+    _etiquetas.clear()
     _texto_actual.clear()
+    _etapa_actual = None
+    _subtitulo_actual = None
     sys.stdout = _Duplicador()
 
 
 def agregar_subtitulo(texto):
+    global _subtitulo_actual
     _cerrar_texto()
-    _elementos.append(("subtitulo", texto))
+    _agregar("subtitulo", texto)
+    _subtitulo_actual = texto
     _consola.write(f"\n=== {texto} ===\n")
 
 
 def agregar_figura(fig):
     _cerrar_texto()
-    _elementos.append(("figura", fig))
+    _agregar("figura", fig)
+
+
+# Agrega al reporte un gráfico que ya se guardó como imagen (los de interpretación y
+# validación se guardan directamente en Resultados/Graficos).
+def agregar_imagen(ruta):
+    imagen = plt.imread(ruta)
+    alto, ancho = imagen.shape[:2]
+    fig = plt.figure(figsize=(ancho / 100, alto / 100), dpi=100)
+    eje = fig.add_axes([0, 0, 1, 1])
+    eje.imshow(imagen)
+    eje.axis("off")
+    agregar_figura(fig)
+
+
+# A partir de acá, todo lo que se imprima o se agregue queda marcado con esta etapa.
+def marcar_etapa(nombre):
+    global _etapa_actual
+    if nombre == _etapa_actual:
+        return
+    _cerrar_texto()
+    _etapa_actual = nombre
+    if _aviso_etapa is not None:
+        _aviso_etapa(nombre, _subtitulo_actual)
+
+
+# Registra una función que se llama con (etapa, subtítulo actual) cada vez que cambia la etapa
+def al_cambiar_etapa(funcion):
+    global _aviso_etapa
+    _aviso_etapa = funcion
+
+
+# Cambia hacia dónde se escribe lo que se imprime (la interfaz lo manda a su consola)
+def cambiar_consola(nueva):
+    global _consola
+    _consola = nueva
+
+
+# Agrupa lo registrado por etapa, en el orden de 'etapas'. Dentro de cada etapa se repite
+# el subtítulo vigente (por ejemplo "Visita OAS2_0127_MR2") para saber a qué visita
+# corresponde cada texto o figura.
+def elementos_por_etapa(etapas):
+    _cerrar_texto()
+    grupos = {etapa: [] for etapa in etapas}
+    ultimo_subtitulo = {etapa: None for etapa in etapas}
+    subtitulo = None
+    for (tipo, contenido), etapa in zip(_elementos, _etiquetas):
+        if tipo == "subtitulo":
+            subtitulo = contenido
+            continue
+        if etapa not in grupos:
+            continue
+        if subtitulo is not None and ultimo_subtitulo[etapa] != subtitulo:
+            grupos[etapa].append(("subtitulo", subtitulo))
+            ultimo_subtitulo[etapa] = subtitulo
+        grupos[etapa].append((tipo, contenido))
+    return [(etapa, grupos[etapa]) for etapa in etapas]
 
 
 def _guardar_pagina(pdf, fig):

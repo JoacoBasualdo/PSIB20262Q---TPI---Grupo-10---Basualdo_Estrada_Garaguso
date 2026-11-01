@@ -92,13 +92,18 @@ VALIDAR_MRBRAINS = True             # ~1-2 min por sujeto; se saltea si no está
 VISITAS_TEST_RETEST = 2
 RUTA_MRBRAINS = os.path.join(RUTA_DATASET, "MRBrainS18")
 
+# Etapas del pipeline (una por archivo de Funciones/). Todo lo que se imprime y cada figura
+# queda marcado con su etapa (Reporte.marcar_etapa); la interfaz muestra una pestaña por etapa.
+ETAPAS = ["Lectura", "Procesamiento", "Features", "Interpretación", "Validación"]
+
 
 # Procesa todas las visitas de un paciente: acondicionamiento, extracción del cerebro y
 # volúmenes. Genera un PDF con las figuras y devuelve una lista con una fila por visita.
-def procesar_paciente(paciente_id):
+def procesar_paciente(paciente_id, cantidad_visitas=CANTIDAD_VISITAS, guardar_pdf=True):
     Reporte.iniciar_registro()
     filas = []
 
+    Reporte.marcar_etapa(ETAPAS[0])
     datos = cargar_datos_clinicos(RUTA_DATOS_CLINICOS, paciente_id)
     Reporte.agregar_subtitulo(f"Datos clínicos - {paciente_id}")
     Reporte.imprimir_datos_clinicos(datos)
@@ -113,8 +118,9 @@ def procesar_paciente(paciente_id):
     primera_visita_ventricular = None
     ultima_visita_ventricular = None
 
-    for mri_id in datos["MRI ID"].head(CANTIDAD_VISITAS):
+    for mri_id in datos["MRI ID"].head(cantidad_visitas):
         Reporte.agregar_subtitulo(f"Visita {mri_id}")
+        Reporte.marcar_etapa(ETAPAS[0])
 
         carpeta_raw = buscar_carpeta_visita(RUTA_DATASET, mri_id)
         if carpeta_raw is None:
@@ -143,6 +149,7 @@ def procesar_paciente(paciente_id):
             )
             Reporte.agregar_figura(fig_original)
 
+        Reporte.marcar_etapa(ETAPAS[1])
         promedio, movimientos = promediar_adquisiciones(volumenes, tamano_voxel)
 
         print()
@@ -186,6 +193,7 @@ def procesar_paciente(paciente_id):
         Reporte.agregar_figura(fig_normalizada)
 
         # ---- Extracción del cerebro (skull stripping) ----
+        Reporte.marcar_etapa(ETAPAS[2])
         # El atlas se ubica sobre UNA sola adquisición (mpr-1, corregida y normalizada): con el
         # promedio, que tiene menos ruido, la máscara aproximada puede pegarse a la cara y el
         # cuello y el atlas queda mal ubicado. El promedio está en la misma grilla que mpr-1,
@@ -331,6 +339,7 @@ def procesar_paciente(paciente_id):
         )
         Reporte.agregar_figura(fig_umbral)
 
+        Reporte.marcar_etapa(ETAPAS[1])
         valores_histograma.append((corregida[mascara], normalizada[mascara]))
         nombres_histograma.append(mri_id)
 
@@ -361,6 +370,7 @@ def procesar_paciente(paciente_id):
             falta_mostrar_original = False
 
     if valores_histograma:
+        Reporte.marcar_etapa(ETAPAS[1])
         Reporte.agregar_subtitulo("Comparación de intensidades entre visitas")
         fig_histogramas = graficar_histogramas_visitas(
             valores_histograma, nombres_histograma,
@@ -395,13 +405,15 @@ def procesar_paciente(paciente_id):
         fig_comparacion.savefig(
             ruta_comparacion_anatomica, dpi=170, bbox_inches="tight"
         )
+        Reporte.marcar_etapa(ETAPAS[2])
         Reporte.agregar_subtitulo("Comparación anatómica MR1 vs última visita")
         Reporte.agregar_figura(fig_comparacion)
         print(f"Comparación anatómica guardada en: {ruta_comparacion_anatomica}")
 
-    os.makedirs(RUTA_RESULTADOS, exist_ok=True)
-    ruta_pdf = os.path.join(RUTA_RESULTADOS, f"{paciente_id}_visitas.pdf")
-    Reporte.guardar_pdf(ruta_pdf, titulo=f"Paciente {paciente_id}")
+    if guardar_pdf:
+        os.makedirs(RUTA_RESULTADOS, exist_ok=True)
+        ruta_pdf = os.path.join(RUTA_RESULTADOS, f"{paciente_id}_visitas.pdf")
+        Reporte.guardar_pdf(ruta_pdf, titulo=f"Paciente {paciente_id}")
     return filas
 
 
@@ -418,68 +430,91 @@ def procesar_todos():
 
 
 # Interpretación: evolución del cerebro, de los ventrículos y relación con la clínica
-def interpretar(datos):
+# carpeta_resultados: dónde se guardan las tablas y los gráficos.
+# al_guardar_grafico: función opcional que recibe la ruta de cada gráfico guardado
+# (la interfaz la usa para mostrarlos).
+def interpretar(datos, carpeta_resultados=RUTA_RESULTADOS, al_guardar_grafico=None):
+    Reporte.marcar_etapa(ETAPAS[3])
+    carpeta_graficos = os.path.join(carpeta_resultados, "Graficos")
+    rutas_graficos = []
     # Volumen cerebral entre visitas
     evolucion = calcular_evolucion(datos)
     resumen = resumir_pacientes(evolucion)
 
-    ruta_comparacion = os.path.join(RUTA_RESULTADOS, "comparacion_volumenes.csv")
-    ruta_resumen = os.path.join(RUTA_RESULTADOS, "resumen_longitudinal.csv")
+    ruta_comparacion = os.path.join(carpeta_resultados, "comparacion_volumenes.csv")
+    ruta_resumen = os.path.join(carpeta_resultados, "resumen_longitudinal.csv")
     evolucion.to_csv(ruta_comparacion, index=False)
     resumen.to_csv(ruta_resumen, index=False)
     print(f"Comparación longitudinal guardada en: {ruta_comparacion}")
     print(f"Resumen longitudinal guardado en: {ruta_resumen}")
 
-    for ruta in guardar_graficos_evolucion(evolucion, RUTA_GRAFICOS):
+    for ruta in guardar_graficos_evolucion(evolucion, carpeta_graficos):
         print(f"Gráfico guardado en: {ruta}")
+        rutas_graficos.append(ruta)
 
     # Ventrículos entre visitas (en ml, % y fracción ventricular)
     ventriculos = calcular_cambios_ventriculares(datos)
-    ruta_ventriculos = os.path.join(RUTA_RESULTADOS, "comparacion_ventriculos.csv")
+    ruta_ventriculos = os.path.join(carpeta_resultados, "comparacion_ventriculos.csv")
     ventriculos.to_csv(ruta_ventriculos, index=False)
     print(f"Comparación ventricular guardada en: {ruta_ventriculos}")
-    for ruta in graficar_evolucion_ventricular(ventriculos, RUTA_GRAFICOS):
+    for ruta in graficar_evolucion_ventricular(ventriculos, carpeta_graficos):
         print(f"Gráfico ventricular guardado en: {ruta}")
+        rutas_graficos.append(ruta)
     if "fraccion_ventricular_pct" in datos.columns:
-        ruta = graficar_fraccion_ventricular(datos, os.path.join(RUTA_GRAFICOS, "fraccion_ventricular_pacientes.png"))
+        ruta = graficar_fraccion_ventricular(datos, os.path.join(carpeta_graficos, "fraccion_ventricular_pacientes.png"))
         print(f"Gráfico de fracción ventricular guardado en: {ruta}")
+        rutas_graficos.append(ruta)
 
     # Análisis morfológico-clínico: compara volúmenes, nWBV, CDR y MMSE.
     detalle_clinico, resumen_clinico = analizar_evolucion_clinica(datos)
-    detalle_clinico.to_csv(os.path.join(RUTA_RESULTADOS, "analisis_clinico_integrado.csv"), index=False)
-    resumen_clinico.to_csv(os.path.join(RUTA_RESULTADOS, "resumen_clinico_integrado.csv"), index=False)
+    detalle_clinico.to_csv(os.path.join(carpeta_resultados, "analisis_clinico_integrado.csv"), index=False)
+    resumen_clinico.to_csv(os.path.join(carpeta_resultados, "resumen_clinico_integrado.csv"), index=False)
     print("\n========== ANÁLISIS MORFOLÓGICO-CLÍNICO ==========")
     columnas = ["paciente", "cambio_cerebral_pct", "cambio_ventricular_pct",
                 "fraccion_ventricular_inicial_pct", "fraccion_ventricular_final_pct",
                 "cambio_cdr", "cambio_mmse_puntos"]
     print(resumen_clinico[[c for c in columnas if c in resumen_clinico.columns]].to_string(index=False))
-    print("Tablas guardadas en Resultados/ (analisis_clinico_integrado.csv y resumen_clinico_integrado.csv)")
-    for ruta in graficar_analisis_clinico(detalle_clinico, RUTA_GRAFICOS):
+    print(f"Tablas guardadas en {carpeta_resultados} (analisis_clinico_integrado.csv y resumen_clinico_integrado.csv)")
+    for ruta in graficar_analisis_clinico(detalle_clinico, carpeta_graficos):
         print(f"Gráfico clínico guardado en: {ruta}")
+        rutas_graficos.append(ruta)
+
+    if al_guardar_grafico is not None:
+        for ruta in rutas_graficos:
+            al_guardar_grafico(ruta)
 
 
 # Validación del método (ver Funciones/Validacion.py)
-def validar(datos):
-    if VALIDAR_CONCORDANCIA_OASIS:
+# Los parámetros tienen por defecto las constantes de arriba (así funciona main.py);
+# la interfaz los cambia para validar un solo paciente y guardar en otra carpeta.
+def validar(datos, carpeta_resultados=RUTA_RESULTADOS, pacientes=PACIENTES,
+            validar_concordancia_oasis=VALIDAR_CONCORDANCIA_OASIS, validar_test_retest=VALIDAR_TEST_RETEST,
+            visitas_test_retest=VISITAS_TEST_RETEST, validar_mrbrains=VALIDAR_MRBRAINS,
+            al_guardar_grafico=None):
+    Reporte.marcar_etapa(ETAPAS[4])
+    carpeta_graficos = os.path.join(carpeta_resultados, "Graficos")
+    if validar_concordancia_oasis:
         tabla, correlacion_global = concordancia_oasis(datos)
-        ruta = os.path.join(RUTA_RESULTADOS, "concordancia_oasis.csv")
+        ruta = os.path.join(carpeta_resultados, "concordancia_oasis.csv")
         tabla.to_csv(ruta, index=False)
         imprimir_concordancia_oasis(tabla, correlacion_global)
-        graficar_concordancia_oasis(datos, os.path.join(RUTA_GRAFICOS, "concordancia_oasis.png"))
+        ruta_figura = graficar_concordancia_oasis(datos, os.path.join(carpeta_graficos, "concordancia_oasis.png"))
+        if al_guardar_grafico is not None:
+            al_guardar_grafico(ruta_figura)
         print(f"Tabla guardada en: {ruta}")
 
-    if VALIDAR_TEST_RETEST:
-        ruta = os.path.join(RUTA_RESULTADOS, "test_retest.csv")
-        tabla = test_retest(PACIENTES, RUTA_DATASET, RUTA_DATOS_CLINICOS, VISITAS_TEST_RETEST, ruta_csv=ruta)
+    if validar_test_retest:
+        ruta = os.path.join(carpeta_resultados, "test_retest.csv")
+        tabla = test_retest(pacientes, RUTA_DATASET, RUTA_DATOS_CLINICOS, visitas_test_retest, ruta_csv=ruta)
         if tabla is None:
             print("\nTest-retest: no se encontraron visitas con 2 o más adquisiciones.")
         else:
             imprimir_test_retest(tabla, datos)
             print(f"Tabla guardada en: {ruta}")
 
-    if VALIDAR_MRBRAINS:
-        ruta = os.path.join(RUTA_RESULTADOS, "validacion_mrbrains.csv")
-        carpeta_figuras = os.path.join(RUTA_GRAFICOS, "ValidacionMRBrainS")
+    if validar_mrbrains:
+        ruta = os.path.join(carpeta_resultados, "validacion_mrbrains.csv")
+        carpeta_figuras = os.path.join(carpeta_graficos, "ValidacionMRBrainS")
         tabla = validacion_mrbrains(RUTA_MRBRAINS, carpeta_figuras, ruta_csv=ruta)
         if tabla is None:
             print(f"\nMRBrainS18: no se encontraron sujetos en {RUTA_MRBRAINS} (ver README). Se saltea.")
@@ -487,6 +522,71 @@ def validar(datos):
             imprimir_validacion_mrbrains(tabla)
             print(f"Tabla guardada en: {ruta}")
             print(f"Figuras de control en: {carpeta_figuras}")
+
+
+# Procesa UN paciente de punta a punta: lectura, procesamiento, features, interpretación y
+# validación. Es lo que corre la interfaz (Interfaz/App.py). A diferencia de main(), no
+# genera el PDF (se guarda desde la interfaz) y guarda tablas y gráficos en
+# Resultados/Interfaz/<paciente>/ para no pisar los resultados de todos los pacientes.
+# al_progreso: función opcional que recibe (paso, total, texto) para mostrar el avance.
+def ejecutar_pipeline(paciente_id=PACIENTES[0], cantidad_visitas=CANTIDAD_VISITAS,
+                      validar_concordancia_oasis=True, validar_test_retest=False,
+                      visitas_test_retest=VISITAS_TEST_RETEST, validar_mrbrains=False,
+                      al_progreso=None):
+    carpeta = os.path.join(RUTA_RESULTADOS, "Interfaz", paciente_id)
+    os.makedirs(carpeta, exist_ok=True)
+
+    visitas = list(cargar_datos_clinicos(RUTA_DATOS_CLINICOS, paciente_id)["MRI ID"].head(cantidad_visitas))
+    total = 3 * len(visitas) + 2
+    avance = {"paso": 0}
+
+    def aviso(etapa, subtitulo):
+        if etapa in ETAPAS[3:]:
+            paso = 3 * len(visitas) + ETAPAS.index(etapa) - 3
+            texto = etapa
+        else:
+            mri_id = (subtitulo or "").replace("Visita ", "")
+            visita = visitas.index(mri_id) if mri_id in visitas else 0
+            paso = 3 * visita + ETAPAS.index(etapa)
+            texto = f"{mri_id} · {etapa}" if mri_id in visitas else etapa
+        avance["paso"] = max(avance["paso"], paso)
+        if al_progreso is not None:
+            al_progreso(avance["paso"], total, texto)
+
+    Reporte.al_cambiar_etapa(aviso)
+    try:
+        datos = pd.DataFrame(procesar_paciente(paciente_id, cantidad_visitas, guardar_pdf=False))
+        if datos.empty:
+            raise ValueError(f"No se pudo procesar ninguna visita de {paciente_id}.")
+        datos.to_csv(os.path.join(carpeta, "volumenes.csv"), index=False)
+
+        Reporte.marcar_etapa(ETAPAS[3])
+        Reporte.agregar_subtitulo(f"Interpretación - {paciente_id}")
+        interpretar(datos, carpeta, al_guardar_grafico=Reporte.agregar_imagen)
+
+        Reporte.marcar_etapa(ETAPAS[4])
+        Reporte.agregar_subtitulo(f"Validación - {paciente_id}")
+        if len(datos) < 2 and validar_concordancia_oasis:
+            print("Concordancia con OASIS: hace falta al menos 2 visitas. Se saltea.")
+            validar_concordancia_oasis = False
+        validar(datos, carpeta, pacientes=[paciente_id],
+                validar_concordancia_oasis=validar_concordancia_oasis,
+                validar_test_retest=validar_test_retest,
+                visitas_test_retest=visitas_test_retest,
+                validar_mrbrains=validar_mrbrains,
+                al_guardar_grafico=Reporte.agregar_imagen)
+    finally:
+        Reporte.al_cambiar_etapa(None)
+
+    if al_progreso is not None:
+        al_progreso(total, total, "Terminado")
+
+    return {
+        "paciente": paciente_id,
+        "datos": datos,
+        "carpeta": os.path.abspath(carpeta),
+        "elementos": Reporte.elementos_por_etapa(ETAPAS),
+    }
 
 
 def main():
