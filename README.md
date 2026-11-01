@@ -2,76 +2,329 @@
 
 Repositorio correspondiente al Trabajo Práctico de Imágenes Biomédicas (TPI) de la materia **16.63 Procesamiento de Señales e Imágenes Biomédicas** (ITBA).
 
-## Descripción del Proyecto
-Cuantificación de la atrofia cerebral asociada a la Enfermedad de Alzheimer a partir de resonancias magnéticas T1 longitudinales del dataset OASIS-2. Para cada paciente se mide, en cada visita, el volumen de tejido cerebral y el volumen de los ventrículos laterales, y se analiza su evolución en el tiempo.
+**Integrantes:** Joaquín Basualdo, Bautista Estrada y Facundo Garaguso.
 
-Pacientes analizados: OAS2_0070 (sano), OAS2_0048 y OAS2_0087 (demencia) y OAS2_0127 (converted, comienza sano y desarrolla demencia).
+## Índice
 
-## Requisitos y Dependencias
-Para ejecutar el código de este proyecto, es necesario contar con Python instalado. Todas las librerías y dependencias necesarias se encuentran listadas en el archivo `requirements.txt`.
+1. [Descripción del proyecto](#descripción-del-proyecto)
+2. [Requisitos](#requisitos)
+3. [Instalación](#instalación)
+4. [Datos: qué descargar y dónde ponerlo](#datos-qué-descargar-y-dónde-ponerlo)
+5. [Ejecución](#ejecución)
+6. [Cómo funciona el procesamiento](#cómo-funciona-el-procesamiento)
+7. [Estructura del código](#estructura-del-código)
+8. [Resultados](#resultados)
+9. [Problemas frecuentes](#problemas-frecuentes)
+10. [Referencias](#referencias)
 
-## Instrucciones de Instalación
+---
+
+## Descripción del proyecto
+
+El proyecto cuantifica la atrofia cerebral asociada a la enfermedad de Alzheimer a partir de resonancias magnéticas T1 longitudinales del dataset OASIS-2. Para cada paciente se mide, en cada visita:
+
+- el **volumen de tejido cerebral** (sustancia gris + blanca);
+- el **volumen de los ventrículos laterales** (izquierdo y derecho);
+- la **fracción ventricular**: el volumen ventricular dividido por el volumen de la zona intracraneal, en %.
+
+Después se analiza cómo cambian esas medidas entre visitas y se relacionan con la evolución clínica (CDR y MMSE). El método se valida de tres formas: contra los valores publicados por OASIS, repitiendo la medición sobre dos adquisiciones de la misma sesión (test-retest) y contra segmentaciones manuales de MRBrainS18.
+
+| Paciente | Grupo | Visitas | Edad | Evolución clínica |
+|---|---|---|---|---|
+| OAS2_0070 | Sano (*Nondemented*) | 5 en 6,5 años | 80 → 86 | CDR 0 en todas las visitas |
+| OAS2_0048 | Demencia (*Demented*) | 5 en 3,4 años | 66 → 69 | CDR 1; el MMSE cae de 19 a 4 |
+| OAS2_0087 | Demencia (*Demented*) | 2 en 2,1 años | 96 → 98 | CDR 1 → 2 |
+| OAS2_0127 | Convertido (*Converted*) | 5 en 7,2 años | 79 → 86 | CDR 0 → 0,5 desde la segunda visita |
+
+**CDR** (*Clinical Dementia Rating*): 0 = sin demencia, 0,5 = muy leve, 1 = leve, 2 = moderada.
+**MMSE** (*Mini-Mental State Examination*): puntaje de 0 a 30; cuanto más bajo, mayor deterioro cognitivo.
+
+---
+
+## Requisitos
+
+- **Python 3.10 o superior.**
+- Las bibliotecas de `requirements.txt`: `nibabel`, `numpy`, `matplotlib`, `SimpleITK`, `pandas`, `openpyxl`, `scipy` y `nilearn`.
+- **Espacio en disco:** ~19 GB para descargar los dos `.tar.gz` de OASIS-2. Una vez extraídos los 4 pacientes, los `.tar.gz` se pueden borrar: los datos que usa el código ocupan mucho menos.
+- **Internet:** para descargar los datos y, la primera vez que se corre `main.py`, el atlas Harvard-Oxford.
+- **[aria2](https://aria2.github.io/)** (recomendado): descarga los archivos grandes en paralelo y retoma la descarga si se corta.
+
+## Instalación
+
+Desde la carpeta raíz del repositorio:
+
 ```bash
+# (Opcional) entorno virtual
+python -m venv venv
+venv\Scripts\activate          # Windows
+# source venv/bin/activate     # Linux / macOS
+
 pip install -r requirements.txt
 ```
 
-La primera vez que se corre `main.py` se descarga automáticamente el atlas Harvard-Oxford (usado para los ventrículos) en `Dataset/Atlas/`. Hace falta conexión a internet solo esa vez.
+---
 
-## Datos
+## Datos: qué descargar y dónde ponerlo
 
-Los datos no se suben al repositorio (`Dataset/` está en el `.gitignore`).
+Los datos **no se suben al repositorio** (`Dataset/` está en el `.gitignore`). Cada integrante los descarga en su computadora.
 
-### OASIS-2 (datos principales)
+### Resumen de descargas
 
-Fuente: https://sites.wustl.edu/oasisbrains/home/oasis-2/
+| Qué | Para qué | Link | Tamaño | ¿Obligatorio? |
+|---|---|---|---|---|
+| OASIS-2, parte 1 | Imágenes de los pacientes | [OAS2_RAW_PART1.tar.gz](https://download.nrg.wustl.edu/data/OAS2_RAW_PART1.tar.gz) | ~10 GB | Sí |
+| OASIS-2, parte 2 | Imágenes de los pacientes | [OAS2_RAW_PART2.tar.gz](https://download.nrg.wustl.edu/data/OAS2_RAW_PART2.tar.gz) | ~8 GB | Sí |
+| Excel clínico de OASIS-2 | Edad, CDR, MMSE, eTIV, nWBV de cada visita | [oasis_longitudinal_demographics.xlsx](https://sites.wustl.edu/oasisbrains/files/2024/03/oasis_longitudinal_demographics-8d83e569fa2e2d30.xlsx) | < 1 MB | Sí (lo baja solo `descargar_dataset.py`) |
+| Atlas Harvard-Oxford | Ubicar los ventrículos | Automático (nilearn), se guarda en `Dataset/Atlas/` | Chico | Sí (lo baja solo `main.py`) |
+| Plantilla MNI152 | Extraer el cerebro | Viene incluida en nilearn | — | Sí (no hay que descargar nada) |
+| MRBrainS18 (`training.zip`) | Validar los ventrículos | [DataverseNL](https://doi.org/10.34894/E0U32Q) | 471 MB | No (solo para `VALIDAR_MRBRAINS`) |
 
-1. Instalar aria2: `winget install aria2.aria2` y abrir una terminal nueva.
-2. Desde la carpeta del repo, descargar las dos partes (se pueden lanzar en paralelo):
+Página oficial de OASIS-2: https://sites.wustl.edu/oasisbrains/home/oasis-2/
+
+### Paso 1: descargar OASIS-2
+
+1. Instalar aria2 (una sola vez) y **abrir una terminal nueva** para que reconozca el comando:
+   ```powershell
+   winget install aria2.aria2
+   ```
+2. Desde la carpeta raíz del repo, descargar las dos partes en la carpeta `Dataset/`. Se pueden correr en dos terminales a la vez:
    ```powershell
    aria2c -c -x 16 -s 16 -k 1M -d Dataset https://download.nrg.wustl.edu/data/OAS2_RAW_PART1.tar.gz
    aria2c -c -x 16 -s 16 -k 1M -d Dataset https://download.nrg.wustl.edu/data/OAS2_RAW_PART2.tar.gz
    ```
-3. Extraer los pacientes usados: `python descargar_dataset.py` (debe terminar con "Dataset listo.").
+   `-c` permite retomar la descarga si se corta: alcanza con volver a correr el mismo comando. Mientras al lado del `.tar.gz` exista un archivo `.aria2`, la descarga no terminó.
 
-### MRBrainS18 (solo para validar los ventrículos)
+   Sin aria2, también se pueden bajar desde el navegador con los links de la tabla y guardarlos en `Dataset/`.
 
-1. Entrar a https://mrbrains18.isi.uu.nl/data y seguir el enlace al dataset en DataverseNL.
-2. Leer la pestaña **Terms** (condiciones de uso y cita requerida).
-3. Descargar **`training.zip`** (471 MB, 7 sujetos con segmentación manual). `test.zip` no sirve.
-4. Descomprimirlo en `Dataset/MRBrainS18/` (una carpeta por sujeto, cada una con su `segm.nii.gz`).
+### Paso 2: extraer los pacientes usados
 
-## Estructura del código
+```bash
+python descargar_dataset.py
+```
 
-`main.py` organiza todo el flujo y llama a las funciones de la carpeta `Funciones/`, un archivo por etapa:
+El script:
+1. descarga el Excel clínico a `Dataset/oasis_longitudinal_demographics.xlsx` (si no está);
+2. recorre los `.tar.gz` y extrae **solo** los 4 pacientes del trabajo;
+3. verifica que estén todas las visitas.
 
-| Módulo | Qué hace |
-|---|---|
-| `Lectura.py` | Carga de las resonancias, tamaño de vóxel, carpetas de cada visita y Excel clínico (y los datos de MRBrainS18) |
-| `Procesamiento.py` | Promediado de las adquisiciones de cada sesión, corrección de bias field (N4) y normalización de intensidad |
-| `Features.py` | Extracción del cerebro (atlas MNI152 + registro entre visitas), ventrículos laterales (atlas Harvard-Oxford) y fracción ventricular |
-| `Interpretacion.py` | Evolución del cerebro y los ventrículos entre visitas, y relación con CDR y MMSE |
-| `Validacion.py` | Concordancia con OASIS, test-retest y comparación con MRBrainS18 |
-| `Visualizacion.py` | Todas las figuras |
-| `Reporte.py` | PDF por paciente y máscaras ventriculares en NIfTI |
-| `Descarga.py` | Descarga y extracción del dataset OASIS-2 |
+Tiene que terminar con **`Dataset listo.`**. Si dice que faltan visitas, poner `CORTAR_AL_TERMINAR = False` en `Funciones/Descarga.py` y volver a correrlo.
+
+> Importante: el script **no** descarga los `.tar.gz`; los lee desde `Dataset/`. Si no los encuentra, da `FileNotFoundError` (ver [Problemas frecuentes](#problemas-frecuentes)).
+
+### Paso 3 (opcional): MRBrainS18, para validar los ventrículos
+
+1. Entrar a https://mrbrains18.isi.uu.nl/data y seguir el enlace al dataset en DataverseNL (https://doi.org/10.34894/E0U32Q).
+2. Leer la pestaña **Terms**: condiciones de uso y cita obligatoria.
+3. Descargar **`training.zip`** (471 MB, 7 sujetos con segmentación manual). `test.zip` no sirve porque no trae segmentaciones.
+4. Descomprimirlo en `Dataset/MRBrainS18/`, con una carpeta por sujeto, cada una con su `segm.nii.gz` y su T1.
+
+Si esta carpeta no existe, `main.py` saltea esta validación y sigue con el resto.
+
+### Estructura final esperada
+
+```
+Dataset/
+├── oasis_longitudinal_demographics.xlsx
+├── OAS2_RAW_PART1.tar.gz                 (se puede borrar después del paso 2)
+├── OAS2_RAW_PART2.tar.gz                 (se puede borrar después del paso 2)
+├── OAS2_RAW_PART1/
+│   ├── OAS2_0048_MR1/RAW/mpr-1.nifti.img (+ .hdr, mpr-2, mpr-3, ...)
+│   ├── OAS2_0048_MR2/RAW/...
+│   └── ...
+├── OAS2_RAW_PART2/
+│   └── OAS2_0127_MR1/RAW/...
+├── Atlas/                                (lo crea main.py: atlas Harvard-Oxford)
+└── MRBrainS18/                           (opcional)
+    ├── 1/
+    │   ├── segm.nii.gz
+    │   └── orig/T1.nii.gz ...
+    ├── 4/
+    └── ...
+```
+
+`main.py` busca cada visita (`OAS2_XXXX_MRn`) en todas las carpetas `OAS2_RAW_PART*`, así que no importa en qué parte quedó cada una.
+
+---
 
 ## Ejecución
 
 Desde la carpeta raíz del repositorio:
 
 ```bash
-python descargar_dataset.py   # una sola vez, para extraer los datos (ver "Datos")
+python descargar_dataset.py   # una sola vez, para extraer los datos
 python main.py                # procesamiento, interpretación y validación
 ```
+
+### Opciones de `main.py`
 
 Al principio de `main.py` se elige qué partes correr:
 
 | Opción | Qué hace | Tiempo aproximado |
 |---|---|---|
-| `PROCESAR_IMAGENES` | Procesa las resonancias de los 4 pacientes. Con `False` usa el `Resultados/volumenes.csv` ya generado y solo rehace interpretación y validación | ~30-40 min |
+| `PROCESAR_IMAGENES` | Procesa las resonancias de los 4 pacientes. Con `False` usa el `Resultados/volumenes.csv` ya generado y solo rehace la interpretación y la validación | ~30-40 min |
 | `VALIDAR_CONCORDANCIA_OASIS` | Compara nuestra tasa de atrofia con la del nWBV publicado por OASIS | segundos |
 | `VALIDAR_TEST_RETEST` | Mide el error del método comparando dos adquisiciones de la misma sesión (`VISITAS_TEST_RETEST` visitas por paciente) | ~2-3 min por visita |
 | `VALIDAR_MRBRAINS` | Compara nuestros ventrículos con la segmentación manual de MRBrainS18 (se saltea si no está `Dataset/MRBrainS18/`) | ~1-2 min por sujeto |
+| `VISITAS_TEST_RETEST` | Cantidad de visitas por paciente que se usan en el test-retest | — |
+| `PACIENTES` | Lista de pacientes a procesar | — |
+| `CANTIDAD_VISITAS` | Máximo de visitas por paciente | — |
+
+> El registro de SimpleITK usa varios hilos, así que dos corridas pueden diferir en ~1% en algunos volúmenes. Es normal y está por debajo del error del método medido en el test-retest.
+
+---
+
+## Cómo funciona el procesamiento
+
+Para cada paciente y cada visita (`procesar_paciente` en `main.py`):
+
+1. **Lectura**: se cargan las 3-4 adquisiciones T1 (MPRAGE) de la sesión, formato Analyze, vóxel de 1 × 1 × 1,25 mm.
+2. **Promediado**: las adquisiciones se alinean con `mpr-1` (registro rígido por información mutua) y se promedian para reducir el ruido.
+3. **Máscara de la cabeza**: umbral de Otsu, cierre morfológico, relleno de huecos y componente conectada más grande.
+4. **Corrección de *bias field***: algoritmo N4 sobre la máscara de la cabeza, para que un mismo tejido tenga el mismo brillo en toda la imagen.
+5. **Normalización de intensidad**: percentiles 1 y 99 de la cabeza → 0 y 1.
+6. **Extracción del cerebro**:
+   - **Primera visita**: se registra la plantilla MNI152 sobre el paciente (registro afín, con búsqueda de la inclinación inicial) para obtener la **zona intracraneal**. Adentro de esa zona, el tejido se separa del líquido con un umbral calculado por k-medias de 4 clases.
+   - **Visitas siguientes**: se alinean con la primera visita (registro rígido) y se usa **la misma zona intracraneal**, así todas las visitas se miden sobre la misma región.
+7. **Ventrículos laterales**: las etiquetas del atlas Harvard-Oxford se llevan al paciente con las mismas transformaciones. Alrededor de cada etiqueta (8 mm) se buscan los vóxeles oscuros (líquido) y se conservan las regiones conectadas a la etiqueta. Cada visita recibe un **estado de control** (`REVISAR_MASCARA`, `REVISAR_VOLUMEN` o `REVISAR_REGISTRO_O_SEGMENTACION`).
+8. **Medidas**: volumen de tejido, volumen intracraneal, nWBV propio, ventrículos (total, izquierdo y derecho) y fracción ventricular.
+9. **Salidas**: PDF del paciente con las figuras de cada etapa, máscara ventricular en NIfTI y comparación anatómica de la primera y la última visita.
+
+Después de procesar a todos los pacientes:
+
+- **Interpretación** (`interpretar`): cambios desde la primera visita y entre visitas, tasas por año y relación con CDR y MMSE.
+- **Validación** (`validar`): concordancia con OASIS, test-retest y MRBrainS18.
+
+---
+
+## Estructura del código
+
+```
+├── main.py                 Flujo completo: procesamiento, interpretación y validación
+├── descargar_dataset.py    Extrae los pacientes de OASIS-2 (llama a Funciones/Descarga.py)
+├── requirements.txt
+├── Funciones/              Un archivo por etapa
+├── Resultados/             CSV, gráficos, PDFs y máscaras generados
+└── Informe/                Informe en LaTeX y PDF
+```
+
+| Módulo | Qué hace |
+|---|---|
+| `Lectura.py` | Carga de las resonancias, tamaño de vóxel, carpetas de cada visita, Excel clínico y datos de MRBrainS18 |
+| `Procesamiento.py` | Promediado de las adquisiciones, máscara de la cabeza, corrección de *bias field* (N4) y normalización de intensidad |
+| `Features.py` | Extracción del cerebro (plantilla MNI152 y registro entre visitas), ventrículos laterales (atlas Harvard-Oxford) y fracción ventricular |
+| `Interpretacion.py` | Evolución del cerebro y los ventrículos entre visitas, y relación con CDR y MMSE |
+| `Validacion.py` | Concordancia con OASIS, test-retest y comparación con MRBrainS18 |
+| `Visualizacion.py` | Todas las figuras |
+| `Reporte.py` | PDF por paciente y máscaras ventriculares en NIfTI |
+| `Descarga.py` | Extracción del dataset OASIS-2 desde los `.tar.gz` |
+
+<details>
+<summary><b>Detalle de las funciones de cada módulo</b> (click para desplegar)</summary>
+
+#### `main.py`
+| Función | Qué hace |
+|---|---|
+| `procesar_paciente(paciente_id)` | Procesa todas las visitas de un paciente, genera su PDF y devuelve una fila por visita |
+| `procesar_todos()` | Procesa los pacientes de `PACIENTES` y guarda `volumenes.csv` después de cada uno |
+| `interpretar(datos)` | Evolución del cerebro, de los ventrículos y relación con la clínica (CSV y gráficos) |
+| `validar(datos)` | Corre las validaciones activadas en las opciones |
+| `main()` | Punto de entrada: procesa (o lee el CSV), interpreta y valida |
+
+#### `Lectura.py`
+| Función | Qué hace |
+|---|---|
+| `cargar_volumen_nifti(ruta)` | Lee una resonancia (Analyze/NIfTI) como matriz 3D |
+| `leer_tamano_voxel(ruta)` | Tamaño del vóxel en mm, leído del encabezado |
+| `listar_adquisiciones(carpeta_raw)` | Lista las adquisiciones de una visita, con `mpr-1` primero |
+| `cargar_datos_clinicos(ruta_xlsx, paciente_id)` | Filas del Excel de OASIS de un paciente |
+| `buscar_carpeta_visita(ruta_dataset, mri_id)` | Busca la carpeta `RAW` de una visita en `OAS2_RAW_PART1` y `PART2` |
+| `buscar_archivos_mrbrains(carpeta_sujeto)` | Segmentación manual y T1 de 1 mm de un sujeto de MRBrainS18 |
+| `cargar_t1_como_oasis(ruta)` | Carga la T1 de MRBrainS18 en la orientación que usa el código |
+
+#### `Procesamiento.py`
+| Función | Qué hace |
+|---|---|
+| `numpy_a_sitk(volumen, tamano_voxel)` | Convierte una matriz de NumPy en imagen de SimpleITK con su tamaño físico |
+| `registrar_rigido(fija, movil)` | Registro rígido (6 parámetros) por información mutua de Mattes, en 3 resoluciones |
+| `movimiento_de_transformada(transformada)` | Resume la rotación y el desplazamiento de un registro |
+| `promediar_adquisiciones(volumenes, tamano_voxel)` | Alinea las adquisiciones con `mpr-1` y las promedia |
+| `mascara_cabeza(volumen, tamano_voxel)` | Máscara de la cabeza: Otsu, cierre, relleno y componente más grande |
+| `rellenar_huecos_por_corte(mascara)` | Rellena los huecos de una máscara corte a corte |
+| `corregir_bias_field(volumen, tamano_voxel, ...)` | Corrección N4 de la inhomogeneidad de campo |
+| `normalizar_intensidad(volumen, mascara, ...)` | Lleva los percentiles 1 y 99 a 0 y 1 |
+| `filtro_mediana(volumen, tamano=3)` | Filtro de mediana 3×3×3 (solo para una figura comparativa) |
+| `filtro_gaussiano(volumen, tamano_voxel, sigma_mm)` | Filtro gaussiano (no se usa en el flujo principal) |
+
+#### `Features.py`
+| Función | Qué hace |
+|---|---|
+| `distancia_al_borde`, `erosionar`, `dilatar` | Morfología en milímetros (independiente del tamaño del vóxel) |
+| `componente_mas_grande(mascara)` | Se queda con la región conectada más grande |
+| `volumen_ml(mascara, tamano_voxel)` | Cantidad de vóxeles → mililitros |
+| `limites_kmedias(valores, clases=4)` | Umbral de tejido por k-medias de 4 clases |
+| `cargar_atlas()` | Carga la plantilla MNI152 2009a y su máscara de cerebro |
+| `busqueda_inclinacion(...)` | Prueba varias inclinaciones iniciales y elige la que mejor alinea |
+| `registrar_atlas(...)` / `ubicar_atlas(...)` | Registro afín de la plantilla MNI152 sobre el paciente |
+| `tejido_dentro_de_zona(...)` | Tejido dentro de la zona intracraneal, sin meninges ni senos venosos |
+| `mascara_cerebro(...)` | Extracción del cerebro en la primera visita |
+| `registrar_visitas(...)` | Registro rígido entre visitas, con dos puntos de partida y control por correlación |
+| `rigida_desde_atlas(...)` | Punto de partida del registro a partir del atlas (cuando la cabeza se movió mucho) |
+| `mascara_cerebro_seguimiento(...)` | Extracción del cerebro en las visitas siguientes, con la zona de la primera |
+| `segmentar_ventriculos(...)` | Ventrículos laterales con el atlas Harvard-Oxford y umbral de líquido |
+| `fraccion_ventricular(vent_ml, intracraneal_ml)` | 100 · ventrículos / zona intracraneal |
+
+#### `Interpretacion.py`
+| Función | Qué hace |
+|---|---|
+| `calcular_evolucion(datos)` | Cambio del volumen cerebral y del nWBV desde la primera visita |
+| `resumir_pacientes(evolucion)` | Resumen por paciente: cambio total y tasa por año |
+| `calcular_cambios_ventriculares(datos)` | Cambio de los ventrículos (ml, % y fracción ventricular) |
+| `analizar_evolucion_clinica(datos)` | Cambios morfológicos junto con CDR y MMSE; devuelve el detalle por visita y el resumen |
+
+#### `Validacion.py`
+| Función | Qué hace |
+|---|---|
+| `concordancia_oasis(datos)` | Compara la pendiente de nuestro nWBV con la del de OASIS |
+| `test_retest(...)` | Mide cerebro y ventrículos en `mpr-1` y `mpr-2` de una misma visita |
+| `validacion_mrbrains(...)` | Dice y diferencia de volumen contra la segmentación manual de MRBrainS18 |
+| `pendiente`, `dice`, `a_grilla_manual`, ... | Funciones auxiliares |
+| `imprimir_*` | Muestran cada validación en la terminal |
+
+#### `Visualizacion.py`
+| Función | Qué hace |
+|---|---|
+| `visualizar_planos_ortogonales` | Cortes sagital, coronal y axial |
+| `graficar_histogramas_visitas` | Histogramas de intensidad por visita |
+| `visualizar_mascaras` | Contornos de las máscaras sobre la imagen |
+| `graficar_histograma_umbral` | Histograma con el umbral de k-medias |
+| `visualizar_ventriculos` | Contorno de los ventrículos en tres planos |
+| `visualizar_comparacion_ventricular` | Primera y última visita sobre los mismos cortes |
+| `guardar_graficos_evolucion` | Evolución del volumen cerebral y del nWBV |
+| `graficar_evolucion_ventricular` | Evolución del tejido y de los ventrículos |
+| `graficar_fraccion_ventricular` | Fracción ventricular de todos los pacientes |
+| `graficar_analisis_clinico` | Morfología junto con CDR y MMSE |
+| `graficar_concordancia_oasis` | nWBV propio contra el de OASIS |
+| `graficar_validacion_mrbrains` | Contorno manual (verde) contra el nuestro (rojo) |
+
+#### `Reporte.py`
+| Función | Qué hace |
+|---|---|
+| `iniciar_registro`, `agregar_subtitulo`, `agregar_figura` | Van juntando el texto de la terminal y las figuras de un paciente |
+| `guardar_pdf(ruta_pdf, titulo)` | Arma el PDF del paciente |
+| `imprimir_datos_clinicos(datos)` | Muestra la tabla clínica del paciente |
+| `guardar_mascara_ventricular(...)` | Guarda la máscara ventricular en NIfTI, con la ubicación espacial de `mpr-1` |
+
+#### `Descarga.py`
+| Función | Qué hace |
+|---|---|
+| `main()` | Excel clínico → extracción de los pacientes → verificación |
+| `diagnostico()` | Muestra dónde busca la carpeta `Dataset` y si encuentra los `.tar.gz` |
+| `extraer_pacientes(url, pacientes, destino)` | Recorre un `.tar.gz` y extrae solo los pacientes pedidos |
+| `verificar(pacientes)` | Compara las visitas del Excel con las carpetas extraídas |
+
+</details>
+
+---
 
 ## Resultados
 
@@ -80,12 +333,54 @@ Todo queda en `Resultados/`:
 | Archivo | Contenido |
 |---|---|
 | `OAS2_XXXX_visitas.pdf` | Reporte de cada paciente: salida de la terminal y figuras de cada etapa |
-| `volumenes.csv` | Una fila por visita: datos clínicos, volumen de tejido, zona intracraneal, nWBV propio, ventrículos (ml) y fracción ventricular |
+| `volumenes.csv` | Una fila por visita: datos clínicos, volumen de tejido, zona intracraneal, nWBV propio, ventrículos (ml), fracción ventricular y estado de control |
 | `comparacion_volumenes.csv`, `resumen_longitudinal.csv` | Evolución del volumen cerebral |
 | `comparacion_ventriculos.csv` | Evolución de los ventrículos (ml, % y fracción ventricular) |
 | `analisis_clinico_integrado.csv`, `resumen_clinico_integrado.csv` | Cambios morfológicos junto con CDR y MMSE |
-| `concordancia_oasis.csv`, `test_retest.csv`, `validacion_mrbrains.csv` | Validación del método |
-| `Graficos/` | Gráficos de evolución, fracción ventricular, comparación anatómica MR1/última visita y validación |
-| `MascarasVentriculares/` | Máscara 3D de los ventrículos de cada visita (`.nii.gz`) |
+| `concordancia_oasis.csv` | Pendiente de nuestro nWBV contra la del de OASIS |
+| `test_retest.csv` | Diferencia entre `mpr-1` y `mpr-2` de una misma visita |
+| `validacion_mrbrains.csv` | Dice y error de volumen contra MRBrainS18 |
+| `Graficos/` | Evolución por paciente, fracción ventricular, análisis clínico y concordancia con OASIS |
+| `Graficos/ComparacionAnatomica/` | Primera y última visita de cada paciente sobre los mismos cortes |
+| `Graficos/ValidacionMRBrainS/` | Contorno manual contra el nuestro para cada sujeto de MRBrainS18 |
+| `MascarasVentriculares/OAS2_XXXX/` | Máscara 3D de los ventrículos de cada visita (`.nii.gz`); se puede abrir en ITK-SNAP, 3D Slicer o FSLeyes junto con `mpr-1` |
 
-**Fracción ventricular:** volumen ventricular dividido por el volumen de la zona intracraneal (en %). La zona intracraneal es la misma región en todas las visitas de un paciente, así que dentro de un paciente la fracción cambia solo si cambian los ventrículos; entre pacientes, quita el efecto del tamaño de la cabeza.
+**Fracción ventricular:** volumen ventricular dividido por el volumen de la zona intracraneal, en %. La zona intracraneal es la misma región en todas las visitas de un paciente: dentro de un paciente, la fracción cambia solo si cambian los ventrículos; entre pacientes, quita el efecto del tamaño de la cabeza.
+
+**Zona intracraneal:** es la máscara de cerebro de la plantilla MNI152 llevada al paciente. No es el volumen intracraneal real (mide entre 1,02 y 1,19 veces el eTIV de OASIS), pero sirve como referencia fija para relativizar.
+
+### Resumen de la validación
+
+| Validación | Resultado |
+|---|---|
+| Test-retest (error del método) | Tejido: 6,9 ml (0,55%). Ventrículos: 0,22 ml (0,48%) |
+| MRBrainS18 (7 sujetos) | Dice medio 0,84 (0,74-0,91); correlación de volumen r = 0,98; el método mide en promedio un 19,5% menos que la segmentación manual (diferencia sistemática, no afecta la comparación entre visitas) |
+| Concordancia con OASIS | Cociente entre nuestra pendiente de nWBV y la de OASIS entre 1,02 y 1,56 (mismo sentido en los 4 pacientes) |
+
+---
+
+## Problemas frecuentes
+
+| Problema | Solución |
+|---|---|
+| `FileNotFoundError: No se encontró el archivo: ...OAS2_RAW_PART1.tar.gz` | Los `.tar.gz` no están en `Dataset/`. Revisar con la salida de `diagnostico()` dónde se buscan, y descargarlos (paso 1) |
+| `descargar_dataset.py` dice que faltan visitas | Poner `CORTAR_AL_TERMINAR = False` en `Funciones/Descarga.py` y volver a correrlo |
+| La descarga con aria2 se cortó | Volver a correr el mismo comando `aria2c -c ...`: sigue desde donde quedó |
+| `aria2c` no se reconoce como comando | Cerrar y abrir la terminal después de instalarlo con `winget` |
+| `Aviso: No se encontró la carpeta de OAS2_XXXX_MRn` | Esa visita no se extrajo; volver a correr `python descargar_dataset.py` |
+| Error al descargar el atlas Harvard-Oxford | Hace falta internet la primera vez que se corre `main.py`. Si queda una descarga a medias, borrar `Dataset/Atlas/` y volver a correr |
+| `MRBrainS18: no se encontraron sujetos` | Es solo un aviso: falta `Dataset/MRBrainS18/` (paso 3). El resto se ejecuta igual |
+| `PROCESAR_IMAGENES = False pero no existe Resultados/volumenes.csv` | Correr una vez con `PROCESAR_IMAGENES = True` |
+| Los volúmenes cambian levemente entre corridas | Es el registro multihilo de SimpleITK (~1%); ver [Ejecución](#ejecución) |
+
+---
+
+## Referencias
+
+- **OASIS-2:** Marcus, D. S., Fotenos, A. F., Csernansky, J. G., Morris, J. C., & Buckner, R. L. (2010). Open Access Series of Imaging Studies: Longitudinal MRI Data in Nondemented and Demented Older Adults. *Journal of Cognitive Neuroscience*, 22(12), 2677-2684. https://doi.org/10.1162/jocn.2009.21407
+- **Plantilla MNI152 2009a:** Fonov, V., Evans, A. C., Botteron, K., Almli, C. R., McKinstry, R. C., Collins, D. L., & the Brain Development Cooperative Group (2011). Unbiased average age-appropriate atlases for pediatric studies. *NeuroImage*, 54(1), 313-327.
+- **Corrección N4:** Tustison, N. J., Avants, B. B., Cook, P. A., Zheng, Y., Egan, A., Yushkevich, P. A., & Gee, J. C. (2010). N4ITK: Improved N3 bias correction. *IEEE Transactions on Medical Imaging*, 29(6), 1310-1320.
+- **Atlas Harvard-Oxford:** distribuido con FSL (https://fsl.fmrib.ox.ac.uk/fsl/fslwiki/Atlases), descargado mediante nilearn.
+- **MRBrainS18:** Kuijf, H. J., et al. (2024). MR Brain Segmentation Challenge 2018 Data. DataverseNL. https://doi.org/10.34894/E0U32Q
+
+Al usar los datos de OASIS se debe incluir el agradecimiento: *"Data were provided [in part] by OASIS"* y la cita de Marcus et al. (2010).
