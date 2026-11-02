@@ -1,10 +1,10 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex 2026.9.8)  14 OCT 2026 17:15
+This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex 2026.9.8)  1 NOV 2026 11:51
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
  %&-line parsing enabled.
-**"c:/Users/Joaquin Basualdo/Desktop/ITBA/4to 1er cuatri/PSIB/Trabajos finales/Final TPI/Informe/PSIB20262Q---TPI---Grupo-10---Basualdo_Estrada_Garaguso.tex"
-(c:/Users/Joaquin Basualdo/Desktop/ITBA/4to 1er cuatri/PSIB/Trabajos finales/Final TPI/Informe/PSIB20262Q---TPI---Grupo-10---Basualdo_Estrada_Garaguso.tex
+**"d:/Usuarios/Escritorio/Carpetas/Archivos e Imagenes/Facultad/ITBA 2026/2Q/PSIB/PSIB20262Q---TPI---Grupo-10---Basualdo_Estrada_Garaguso/Informe/PSIB20262Q---TPI---Grupo-10---Basualdo_Estrada_Garaguso.tex"
+(d:/Usuarios/Escritorio/Carpetas/Archivos e Imagenes/Facultad/ITBA 2026/2Q/PSIB/PSIB20262Q---TPI---Grupo-10---Basualdo_Estrada_Garaguso/Informe/PSIB20262Q---TPI---Grupo-10---Basualdo_Estrada_Garaguso.tex
 LaTeX2e <2026-06-01>
 L3 programming layer <2026-08-10>
 (c:/texlive/2026/texmf-dist/tex/latex/base/article.cls
@@ -569,12 +569,27 @@ LaTeX Info: Redefining \% on input line 1.
 \tf@toc=\write4
 \openout4 = `PSIB20262Q---TPI---Grupo-10---Basualdo_Estrada_Garaguso.toc'.
 
- [2] [3]
+ [2] [3] [4] [5] [6] [7] [8]
+Overfull \hbox (0.49321pt too wide) in paragraph at lines 323--324
+\T1/cmr/m/n/10 ma-yo-res se-gún el mé-to-do pro-pio (se-gún OA-SIS, la ma-yor ta-sa de atro-fia co-rres-pon-de a OAS2_0087).
+ []
+
+
+Overfull \hbox (8.85732pt too wide) in paragraph at lines 325--326
+[]\T1/cmr/m/n/10 La Fi-gu-ra []1[] mues-tra la com-pa-ra-ción ana-tó-mi-ca en-tre la pri-me-ra y la úl-ti-ma vi-si-ta de OAS2_0127,
+ []
+
+<../Resultados/Graficos/ComparacionAnatomica/comparacion_ventricular_OAS2_0127.png, id=187, 604.09218pt x 924.20576pt>
+File: ../Resultados/Graficos/ComparacionAnatomica/comparacion_ventricular_OAS2_0127.png Graphic file (type png)
+<use ../Resultados/Graficos/ComparacionAnatomica/comparacion_ventricular_OAS2_0127.png>
+Package pdftex.def Info: ../Resultados/Graficos/ComparacionAnatomica/comparacion_ventricular_OAS2_0127.png  used on input line 329.
+(pdftex.def)             Requested size: 234.73653pt x 359.12729pt.
+[9] [10 <../Resultados/Graficos/ComparacionAnatomica/comparacion_ventricular_OAS2_0127.png>] [11]
 
 Package caption Warning: Unused \captionsetup[sub] on input line 56.
 See the caption package documentation for explanation.
 
-[4] (./PSIB20262Q---TPI---Grupo-10---Basualdo_Estrada_Garaguso.aux
+[12] (./PSIB20262Q---TPI---Grupo-10---Basualdo_Estrada_Garaguso.aux
 LaTeX Info: Redefining \. on input line 12.
 LaTeX Info: Redefining \% on input line 12.
 )
@@ -583,21 +598,21 @@ LaTeX2e <2026-06-01>
 L3 programming layer <2026-08-10>
  ***********
 Package rerunfilecheck Info: File `PSIB20262Q---TPI---Grupo-10---Basualdo_Estrada_Garaguso.out' has not changed.
-(rerunfilecheck)             Checksum: BE13A5200EBBD01050B30043235824CF;1546.
+(rerunfilecheck)             Checksum: 1ADCFE63E1BBB72343DD17C6815C08F9;3522.
  ) 
 Here is how much of TeX's memory you used:
- 19215 strings out of 467099
- 373346 string characters out of 5412503
- 771919 words of memory out of 5000000
- 48324 multiletter control sequences out of 15000+600000
- 639056 words of font info for 61 fonts, out of 8000000 for 9000
+ 19335 strings out of 467098
+ 375823 string characters out of 5412482
+ 776712 words of memory out of 5000000
+ 48397 multiletter control sequences out of 15000+600000
+ 648482 words of font info for 86 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 74i,11n,80p,1484b,1059s stack positions out of 10000i,1000n,20000p,200000b,200000s
-<c:/texlive/2026/texmf-dist/fonts/type1/public/cm-super/sfbx1000.pfb><c:/texlive/2026/texmf-dist/fonts/type1/public/cm-super/sfbx1200.pfb><c:/texlive/2026/texmf-dist/fonts/type1/public/cm-super/sfbx1440.pfb><c:/texlive/2026/texmf-dist/fonts/type1/public/cm-super/sfbx2074.pfb><c:/texlive/2026/texmf-dist/fonts/type1/public/cm-super/sfcc1200.pfb><c:/texlive/2026/texmf-dist/fonts/type1/public/cm-super/sfcc1440.pfb><c:/texlive/2026/texmf-dist/fonts/type1/public/cm-super/sfcc1728.pfb><c:/texlive/2026/texmf-dist/fonts/type1/public/cm-super/sfrm0500.pfb><c:/texlive/2026/texmf-dist/fonts/type1/public/cm-super/sfrm1000.pfb><c:/texlive/2026/texmf-dist/fonts/type1/public/cm-super/sfrm1200.pfb>
-Output written on PSIB20262Q---TPI---Grupo-10---Basualdo_Estrada_Garaguso.pdf (4 pages, 157738 bytes).
+ 74i,13n,80p,1672b,1130s stack positions out of 10000i,1000n,20000p,200000b,200000s
+<c:/texlive/2026/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb><c:/texlive/2026/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi8.pfb><c:/texlive/2026/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi9.pfb><c:/texlive/2026/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb><c:/texlive/2026/texmf-dist/fonts/type1/public/amsfonts/cm/cmr8.pfb><c:/texlive/2026/texmf-dist/fonts/type1/public/amsfonts/cm/cmr9.pfb><c:/texlive/2026/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb><c:/texlive/2026/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy7.pfb><c:/texlive/2026/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy8.pfb><c:/texlive/2026/texmf-dist/fonts/type1/public/cm-super/sfbi1000.pfb><c:/texlive/2026/texmf-dist/fonts/type1/public/cm-super/sfbx0800.pfb><c:/texlive/2026/texmf-dist/fonts/type1/public/cm-super/sfbx0900.pfb><c:/texlive/2026/texmf-dist/fonts/type1/public/cm-super/sfbx1000.pfb><c:/texlive/2026/texmf-dist/fonts/type1/public/cm-super/sfbx1200.pfb><c:/texlive/2026/texmf-dist/fonts/type1/public/cm-super/sfbx1440.pfb><c:/texlive/2026/texmf-dist/fonts/type1/public/cm-super/sfbx2074.pfb><c:/texlive/2026/texmf-dist/fonts/type1/public/cm-super/sfcc1200.pfb><c:/texlive/2026/texmf-dist/fonts/type1/public/cm-super/sfcc1440.pfb><c:/texlive/2026/texmf-dist/fonts/type1/public/cm-super/sfcc1728.pfb><c:/texlive/2026/texmf-dist/fonts/type1/public/cm-super/sfrm0500.pfb><c:/texlive/2026/texmf-dist/fonts/type1/public/cm-super/sfrm0800.pfb><c:/texlive/2026/texmf-dist/fonts/type1/public/cm-super/sfrm0900.pfb><c:/texlive/2026/texmf-dist/fonts/type1/public/cm-super/sfrm1000.pfb><c:/texlive/2026/texmf-dist/fonts/type1/public/cm-super/sfrm1200.pfb><c:/texlive/2026/texmf-dist/fonts/type1/public/cm-super/sfti1000.pfb><c:/texlive/2026/texmf-dist/fonts/type1/public/cm-super/sftt1000.pfb>
+Output written on PSIB20262Q---TPI---Grupo-10---Basualdo_Estrada_Garaguso.pdf (12 pages, 1569445 bytes).
 PDF statistics:
- 137 PDF objects out of 1000 (max. 8388607)
- 109 compressed objects within 2 object streams
- 17 named destinations out of 1000 (max. 500000)
- 89 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 335 PDF objects out of 1000 (max. 8388607)
+ 264 compressed objects within 3 object streams
+ 47 named destinations out of 1000 (max. 500000)
+ 190 words of extra memory for PDF output out of 10000 (max. 10000000)
 
