@@ -813,3 +813,23 @@ def graficar_validacion_mrbrains(t1_manual, ventriculos_manual, ventriculos_prop
     fig.savefig(ruta, dpi=120, bbox_inches="tight")
     plt.close(fig)
     return ruta
+
+
+# Histograma de la cabeza antes y después de corregir el bias field (N4).
+# Cada uno se divide por su mediana para que queden en la misma escala, porque N4
+# cambia la escala general de la imagen. Si la corrección funcionó, los picos de
+# cada tejido quedan más altos y angostos (el mismo tejido tiene un brillo más parejo).
+def graficar_histograma_bias(antes, despues, titulo="Histograma antes y después de N4", bins=200):
+    antes = antes / np.median(antes)
+    despues = despues / np.median(despues)
+    limite = np.percentile(np.concatenate([antes, despues]), 99.5)
+
+    fig, eje = plt.subplots(figsize=(10, 5))
+    eje.hist(antes, bins=bins, range=(0, limite), density=True, histtype='step', linewidth=1.5, label="Antes de N4")
+    eje.hist(despues, bins=bins, range=(0, limite), density=True, histtype='step', linewidth=1.5, label="Después de N4")
+    eje.set_title(titulo)
+    eje.set_xlabel("Intensidad relativa (dividida por la mediana)")
+    eje.set_ylabel("Densidad de vóxeles")
+    eje.legend()
+    plt.tight_layout()
+    return fig

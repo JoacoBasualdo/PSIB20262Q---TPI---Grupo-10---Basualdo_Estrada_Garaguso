@@ -139,6 +139,8 @@ def mascara_cabeza(volumen, tamano_voxel):
 # DOnde ve que hay una curva suave de cambios se estima que es por la iluminacion. Cuaando hay cambio brusco se da por cambios de tejido. Entonces homogeinza los cambios individuales estimando el bias de esa region
 #Ellos lo resolvieron con un modelo cuadrático ajustado a un phantom, un objeto de prueba que se escanea en el mismo equipo. Ustedes no tienen ese phantom, así que necesitan un método que estime la corrección desde la propia imagen del paciente. Eso es lo que hace N4.
 
+
+#La corrección del bias field busca una superficie suave que, al dividir la imagen por ella, deje los picos del histograma lo más angostos posible. Para eso, afila el histograma y le asigna a cada vóxel un valor esperado según su brillo, y calcula el cociente entre el valor del vóxel y ese valor esperado. Esos cocientes se suavizan ajustándoles una B-spline con pocos puntos de control: los valores de los puntos de control se eligen para que la superficie quede lo más cerca posible de todos los cocientes, y cada vóxel toma una mezcla de los puntos de control cercanos. Cuantos menos puntos de control, mayor es el suavizado. La imagen se divide por esa superficie, y el proceso se repite varias veces, aumentando los puntos de control en cada nivel. Parámetros determinados por nosotros son: Factor de reduccion para menor costo computacional, el numero de iteraciones y de niveles, la mascara de la cabeza que se usa.
 def corregir_bias_field(volumen, tamano_voxel, factor_reduccion=4, iteraciones=(50, 50, 50, 50)):
     imagen = numpy_a_sitk(volumen, tamano_voxel)
     mascara = mascara_cabeza(volumen, tamano_voxel)
@@ -159,7 +161,8 @@ def corregir_bias_field(volumen, tamano_voxel, factor_reduccion=4, iteraciones=(
     return sitk.GetArrayFromImage(corregida), sitk.GetArrayFromImage(bias), mascara
 
 
-    
+# Sirve para que las estructuras valgan los mismos valores de intensidad en cada visita, suponiendo que el histograma es mas o menos igual. 
+# Con percentiles muy pequeños son muy suceptibles a artefactos y percentiles muy grandes te comes parte de la imagen.    
 # Usando solos los pixeles de la cabeza busca un valor que deje por debajo al 1% y otro al 99%. Entonces, estira la escala para que el primero valga 0 y el segundo valga 1. Todo lo que queda fuera de ese rango y el fondo lo pone en cero. 
 # Para determinan que sean solo de la cabeza, en corregir bias se usa una máscara utilizando el método de Otsu que deteremina los píxeles que forman parte de la cabeza. 
 def normalizar_intensidad(volumen, mascara, percentil_inferior=1, percentil_superior=99):

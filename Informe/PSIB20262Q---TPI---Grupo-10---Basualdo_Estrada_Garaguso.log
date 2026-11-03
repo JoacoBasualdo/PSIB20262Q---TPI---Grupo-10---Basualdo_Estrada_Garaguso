@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex 2026.9.8)  14 OCT 2026 17:15
+This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex 2026.9.8)  3 NOV 2026 09:50
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -493,12 +493,7 @@ Package uniquecounter Info: New unique counter `rerunfilecheck' on input line 28
 ) (c:/texlive/2026/texmf-dist/tex/latex/l3kernel/l3backend-pdftex.def
 File: l3backend-pdftex.def 2026-08-10 L3 backend support: PDF output (pdfTeX)
 \l__color_backend_stack_int=\count349
-) (./PSIB20262Q---TPI---Grupo-10---Basualdo_Estrada_Garaguso.aux
-LaTeX Info: Redefining \. on input line 12.
-LaTeX Info: Redefining \% on input line 12.
-Package babel Info: 'spanish' activates 'spanish' shorthands.
-(babel)             Reported on input line 12.
-)
+) (./PSIB20262Q---TPI---Grupo-10---Basualdo_Estrada_Garaguso.aux)
 \openout1 = `PSIB20262Q---TPI---Grupo-10---Basualdo_Estrada_Garaguso.aux'.
 
 LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 76.
@@ -521,6 +516,8 @@ LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 76.
 LaTeX Font Info:    ... okay on input line 76.
 LaTeX Info: Redefining \. on input line 76.
 LaTeX Info: Redefining \% on input line 76.
+Package babel Info: 'spanish' activates 'spanish' shorthands.
+(babel)             Reported on input line 76.
  (c:/texlive/2026/texmf-dist/tex/latex/translations/translations-basic-dictionary-spanish.trsl
 File: translations-basic-dictionary-spanish.trsl (spanish translation file `translations-basic-dictionary')
 )
@@ -548,7 +545,6 @@ Package caption Info: Begin \AtBeginDocument code.
 Package caption Info: hyperref package is loaded.
 Package caption Info: End \AtBeginDocument code.
 Package hyperref Info: Link coloring OFF on input line 76.
- (./PSIB20262Q---TPI---Grupo-10---Basualdo_Estrada_Garaguso.out) (./PSIB20262Q---TPI---Grupo-10---Basualdo_Estrada_Garaguso.out)
 \@outlinefile=\write3
 \openout3 = `PSIB20262Q---TPI---Grupo-10---Basualdo_Estrada_Garaguso.out'.
 
@@ -562,19 +558,28 @@ LaTeX Font Info:    Trying to load font information for U+msb on input line 122.
 File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 ) [1{c:/texlive/2026/texmf-var/fonts/map/pdftex/updmap/pdftex.map}{c:/texlive/2026/texmf-dist/fonts/enc/dvips/cm-super/cm-super-t1.enc}
 
-] (./PSIB20262Q---TPI---Grupo-10---Basualdo_Estrada_Garaguso.toc
-LaTeX Info: Redefining \. on input line 1.
-LaTeX Info: Redefining \% on input line 1.
-)
+]
+No file PSIB20262Q---TPI---Grupo-10---Basualdo_Estrada_Garaguso.toc.
 \tf@toc=\write4
 \openout4 = `PSIB20262Q---TPI---Grupo-10---Basualdo_Estrada_Garaguso.toc'.
 
- [2] [3]
+[2] [3]
+c:/Users/Joaquin Basualdo/Desktop/ITBA/4to 1er cuatri/PSIB/Trabajos finales/Final TPI/Informe/PSIB20262Q---TPI---Grupo-10---Basualdo_Estrada_Garaguso.tex:203: Misplaced alignment tab character &.
+l.203 ...Zheng, Y., Egan, A., Yushkevich, P. A., &
+                                                   Gee, J. C. (2010). N4ITK:...
+I can't figure out why you would want to use a tab mark
+here. If you just want an ampersand, the remedy is
+simple: Just type `I\&' now. But if some right brace
+up above has ended a previous alignment prematurely,
+you're probably due for more error messages, and you
+might try typing `S' now just to see what is salvageable.
+
+[4]
 
 Package caption Warning: Unused \captionsetup[sub] on input line 56.
 See the caption package documentation for explanation.
 
-[4] (./PSIB20262Q---TPI---Grupo-10---Basualdo_Estrada_Garaguso.aux
+[5] (./PSIB20262Q---TPI---Grupo-10---Basualdo_Estrada_Garaguso.aux
 LaTeX Info: Redefining \. on input line 12.
 LaTeX Info: Redefining \% on input line 12.
 )
@@ -582,22 +587,29 @@ LaTeX Info: Redefining \% on input line 12.
 LaTeX2e <2026-06-01>
 L3 programming layer <2026-08-10>
  ***********
-Package rerunfilecheck Info: File `PSIB20262Q---TPI---Grupo-10---Basualdo_Estrada_Garaguso.out' has not changed.
-(rerunfilecheck)             Checksum: BE13A5200EBBD01050B30043235824CF;1546.
+
+
+Package rerunfilecheck Warning: File `PSIB20262Q---TPI---Grupo-10---Basualdo_Estrada_Garaguso.out' has changed.
+(rerunfilecheck)                Rerun to get outlines right
+(rerunfilecheck)                or use package `bookmark'.
+
+Package rerunfilecheck Info: Checksums for `PSIB20262Q---TPI---Grupo-10---Basualdo_Estrada_Garaguso.out':
+(rerunfilecheck)             Before: <no file>
+(rerunfilecheck)             After:  BE13A5200EBBD01050B30043235824CF;1546.
  ) 
 Here is how much of TeX's memory you used:
- 19215 strings out of 467099
- 373346 string characters out of 5412503
- 771919 words of memory out of 5000000
- 48324 multiletter control sequences out of 15000+600000
+ 19196 strings out of 467099
+ 372680 string characters out of 5412503
+ 772919 words of memory out of 5000000
+ 48310 multiletter control sequences out of 15000+600000
  639056 words of font info for 61 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 74i,11n,80p,1484b,1059s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 74i,11n,80p,1484b,1129s stack positions out of 10000i,1000n,20000p,200000b,200000s
 <c:/texlive/2026/texmf-dist/fonts/type1/public/cm-super/sfbx1000.pfb><c:/texlive/2026/texmf-dist/fonts/type1/public/cm-super/sfbx1200.pfb><c:/texlive/2026/texmf-dist/fonts/type1/public/cm-super/sfbx1440.pfb><c:/texlive/2026/texmf-dist/fonts/type1/public/cm-super/sfbx2074.pfb><c:/texlive/2026/texmf-dist/fonts/type1/public/cm-super/sfcc1200.pfb><c:/texlive/2026/texmf-dist/fonts/type1/public/cm-super/sfcc1440.pfb><c:/texlive/2026/texmf-dist/fonts/type1/public/cm-super/sfcc1728.pfb><c:/texlive/2026/texmf-dist/fonts/type1/public/cm-super/sfrm0500.pfb><c:/texlive/2026/texmf-dist/fonts/type1/public/cm-super/sfrm1000.pfb><c:/texlive/2026/texmf-dist/fonts/type1/public/cm-super/sfrm1200.pfb>
-Output written on PSIB20262Q---TPI---Grupo-10---Basualdo_Estrada_Garaguso.pdf (4 pages, 157738 bytes).
+Output written on PSIB20262Q---TPI---Grupo-10---Basualdo_Estrada_Garaguso.pdf (5 pages, 156265 bytes).
 PDF statistics:
- 137 PDF objects out of 1000 (max. 8388607)
- 109 compressed objects within 2 object streams
- 17 named destinations out of 1000 (max. 500000)
- 89 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 95 PDF objects out of 1000 (max. 8388607)
+ 67 compressed objects within 1 object stream
+ 18 named destinations out of 1000 (max. 500000)
+ 1 words of extra memory for PDF output out of 10000 (max. 10000000)
 

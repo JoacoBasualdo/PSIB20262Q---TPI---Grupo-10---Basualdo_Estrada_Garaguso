@@ -1,0 +1,2 @@
+paciente,grupo,visitas,anios_seguimiento,cambio_cerebral_ml,cambio_cerebral_pct,cambio_ventricular_ml,cambio_ventricular_pct,cdr_inicial,cdr_final,cambio_cdr,mmse_inicial,mmse_final,cambio_mmse_puntos,fraccion_ventricular_inicial_pct,fraccion_ventricular_final_pct,patron_morfologico,ventriculos_sin_validar
+OAS2_0127,Converted,5,7.225,-72.2,-6.41,20.75,49.5,0.0,0.5,0.5,29.0,30.0,1.0,2.508,3.751,Menor volumen cerebral y mayor volumen ventricular,True

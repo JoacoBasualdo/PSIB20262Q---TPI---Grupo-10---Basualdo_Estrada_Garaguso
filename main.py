@@ -66,7 +66,8 @@ from Funciones.Validacion import (concordancia_oasis, imprimir_concordancia_oasi
 from Funciones.Visualizacion import (visualizar_planos_ortogonales, graficar_histogramas_visitas, visualizar_mascaras,
                                      graficar_histograma_umbral, visualizar_ventriculos, visualizar_comparacion_ventricular,
                                      guardar_graficos_evolucion, graficar_evolucion_ventricular, graficar_fraccion_ventricular,
-                                     graficar_analisis_clinico, graficar_concordancia_oasis)
+                                     graficar_analisis_clinico, graficar_concordancia_oasis,
+                                     graficar_histograma_bias)
 from Funciones import Reporte
 
 RUTA_DATASET = "Dataset"
@@ -177,6 +178,12 @@ def procesar_paciente(paciente_id, cantidad_visitas=CANTIDAD_VISITAS, guardar_pd
             tamano_voxel=tamano_voxel
         )
         Reporte.agregar_figura(fig_corregida)
+
+        fig_histograma_bias = graficar_histograma_bias(
+            promedio[mascara], corregida[mascara],
+            titulo=f"{mri_id} - Histograma de la cabeza antes y después de N4"
+        )
+        Reporte.agregar_figura(fig_histograma_bias)
 
         normalizada, valor_bajo, valor_alto = normalizar_intensidad(corregida, mascara)
 
