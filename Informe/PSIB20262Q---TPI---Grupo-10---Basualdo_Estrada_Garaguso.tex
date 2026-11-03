@@ -158,7 +158,7 @@ La Enfermedad de Alzheimer es un trastorno neurodegenerativo primario y progresi
 
 A nivel macroscópico, esta neurodegeneración sostenida se manifiesta como una severa atrofia estructural del encéfalo. El proceso atrófico provoca una reducción mensurable del volumen del tejido cerebral. Como consecuencia directa de esta pérdida progresiva de masa encefálica, se produce un fenómeno anatómico compensatorio conocido como expansión ventricular, donde se ensanchan drásticamente para ocupar el volumen intracraneal que el tejido muerto ha dejado vacío, llenándose de líquido cefalorraquídeo (LCR).
 
-La magnitud de esta degradación anatómica presenta una fuerte correlación con el deterioro cognitivo del paciente. Clínicamente, el grado de este deterioro se estandariza mediante herramientas de evaluación.
+La magnitud de esta degradación anatómica presenta una fuerte correlación con el deterioro cognitivo del paciente. Clínicamente, el grado de este deterioro se estandariza mediante herramientas de evaluación. Clínicamente, el grado de este deterioro se estandariza mediante herramientas de evaluación como la \textit{Clinical Dementia Rating} (CDR), que clasifica la demencia en normal (0), muy leve (0,5), leve (1), moderada (2) y severa (3), y el \textit{Mini-Mental State Examination} (MMSE), un test cognitivo de 0 a 30 puntos en el que valores menores a 24 sugieren deterioro.
 
 
 
@@ -173,8 +173,6 @@ Por su parte, la ponderación T1 está diseñada para explotar el tiempo de rela
 
 
 
-\subsubsection{Formato NIfT}
-no se si es necesario
 
 \subsection{Estado del Arte}
 
@@ -191,18 +189,180 @@ Inicialmente, el Volumen Intracraneal Total Estimado se obtiene mediante técnic
 El objetivo principal de este proyecto es diseñar e implementar un algoritmo computacional capaz de cuantificar de manera objetiva la progresión de la atrofia estructural del cerebro asociada a la Enfermedad de Alzheimer. Mediante el procesamiento automatizado de imágenes por resonancia magnética (MRI), el sistema medirá métricamente la expansión de los ventrículos cerebrales (consecuencia directa de la pérdida de masa encefálica) y evaluará la degradación del tejido anatómico circundante. Este análisis se fundamentará en la comparación temporal de estudios longitudinales de un mismo paciente, permitiendo trazar la evolución morfológica de la enfermedad a lo largo del tiempo.
 
 \section{Materiales y Métodos}
+\subsection{Datos}
+ 
+Se utilizó el conjunto de datos longitudinal OASIS-2 (Marcus et al., 2010), descripto en la sección de Estado del Arte. En cada visita se adquirieron entre tres y cuatro resonancias T1 consecutivas, con un tamaño de vóxel de $1 \times 1 \times 1{,}25$~mm, almacenadas en formato Analyze (archivos \texttt{.img} y \texttt{.hdr}). Los datos clínicos (grupo, edad, CDR, MMSE, eTIV y nWBV de cada visita) se obtuvieron de la planilla publicada junto con el dataset.
+ 
+Se seleccionaron cuatro pacientes que representan distintas evoluciones clínicas:
+\begin{itemize}
+    \item \textbf{OAS2\_0070} (sano): cinco visitas entre los 80 y los 86 años, con CDR 0 en todas ellas.
+    \item \textbf{OAS2\_0048} (demencia): cinco visitas entre los 66 y los 69 años, con demencia leve (CDR 1) sostenida.
+    \item \textbf{OAS2\_0087} (demencia): dos visitas a los 96 y 98 años, con progresión de demencia leve (CDR 1) a moderada (CDR 2).
+    \item \textbf{OAS2\_0127} (\textit{converted}): cinco visitas entre los 79 y los 86 años; ingresó sano (CDR 0) y desde la segunda visita presentó demencia muy leve (CDR 0,5).
+\end{itemize}
+
+\subsection{Acondicionamiento de las imágenes}
+ 
+Cada visita se acondicionó en tres pasos, con el objetivo de que el mismo tejido tenga el mismo brillo en toda la imagen y en todas las visitas:
+ 
+\begin{enumerate}
+    \item \textbf{Promediado de adquisiciones}: las adquisiciones de una misma sesión se alinearon con la primera (\texttt{mpr-1}) mediante un registro rígido de seis parámetros (tres rotaciones y tres traslaciones), que maximiza la información mutua entre las imágenes con un descenso por gradiente en tres resoluciones. Las imágenes alineadas se promediaron vóxel a vóxel, lo que reduce el ruido y aumenta la relación señal-ruido, siguiendo la misma estrategia que el protocolo de OASIS.
+ 
+    \item \textbf{Corrección de la inhomogeneidad de campo (\textit{bias field})}: el resonador no ilumina la cabeza de forma pareja, por lo que un mismo tejido puede verse más claro o más oscuro según su ubicación. Esta variación lenta se estimó y corrigió con el algoritmo N4 (Tustison et al., 2010), calculado sobre una máscara de la cabeza. La máscara se obtuvo con el umbral de Otsu, seguido de un cierre morfológico, el relleno de huecos corte a corte y la selección de la región conectada más grande, para separar la cabeza del fondo.
+ 
+    \item \textbf{Normalización de intensidad}: dentro de la máscara de la cabeza, el percentil 1 de intensidad se llevó a 0 y el percentil 99 a 1, recortando los valores fuera de ese rango y fijando el fondo en 0. Así, el umbral de tejido es comparable entre visitas aunque el brillo general de las adquisiciones difiera.
+\end{enumerate}
+ 
+Con fines comparativos se aplicó además un filtro de mediana de $3 \times 3 \times 3$ vóxeles al promedio de la primera visita, pero no se utilizó en el resto del procesamiento, ya que el promediado de adquisiciones reduce el ruido sin difuminar los bordes entre tejidos.
+ 
+
+\subsection{Extracción del cerebro}
+ 
+Para medir el volumen cerebral es necesario aislar el cerebro del cráneo, la grasa, los ojos y el cuello. En primer lugar, las intensidades de la cabeza se agrupan mediante un algoritmo de k-means de cuatro clases: oscura (hueso, líquido cefalorraquídeo y aire), sustancia gris, sustancia blanca y grasa. El umbral de tejido es el límite entre la clase oscura y la sustancia gris. Se asigna una clase propia a la grasa porque su brillo es particularmente intenso y, de lo contrario, desplaza los límites entre clases y parte de la sustancia gris queda por debajo del umbral.
+ 
+El umbral por sí solo no alcanza, ya que también incluye grasa y músculo del cuero cabelludo. Por eso se utiliza el atlas MNI152 (Fonov et al., 2011), un cerebro promedio construido a partir de 152 sujetos, que se registra sobre el paciente mediante una transformación afín para delimitar la zona donde se encuentra el cerebro. Esta zona, denominada en adelante \textit{zona intracraneal}, es la máscara de cerebro del atlas (sustancia gris y blanca, con los surcos cerrados y los ventrículos incluidos) transformada al espacio del paciente. No equivale al volumen intracraneal real, ya que no incluye la totalidad del líquido cefalorraquídeo externo y su tamaño depende del ajuste del registro (en los pacientes analizados midió entre 1,02 y 1,19 veces el eTIV de OASIS), pero delimita la misma región anatómica en todas las visitas de un paciente. Antes del registro se prueban distintas inclinaciones de la cabeza, de $-45^\circ$ a $45^\circ$, para tolerar las diferentes posiciones del paciente en el resonador. El tejido cerebral queda definido como los vóxeles que superan el umbral dentro de la zona del atlas. Como los ventrículos y los surcos están ocupados por líquido cefalorraquídeo, que es oscuro en T1, quedan excluidos del tejido aun cuando estén agrandados por la atrofia.
+ 
+Inicialmente se probó una extracción basada solo en erosión y dilatación morfológicas, pero se descartó porque en cerebros con atrofia las circunvoluciones finas desaparecían con la erosión y no se recuperaban.
+ 
+\subsection{Comparación entre visitas}
+ 
+Para que las mediciones de distintas visitas sean comparables, deben realizarse siempre sobre la misma región. Por ello, el atlas se registra únicamente en la primera visita y la zona intracraneal obtenida se traslada a las visitas siguientes mediante un registro rígido (rotación y traslación), dado que el cráneo no cambia con los años. Como la posición de la cabeza varía entre visitas, el registro se inicia desde dos puntos de partida (una búsqueda de la inclinación de la cabeza y una estimación obtenida a partir del atlas) y se conserva el que logra la mayor correlación de intensidades dentro del cerebro.
+ 
+Como control de calidad, el procedimiento emite un aviso si la correlación entre visitas es menor a 0,85 o si la zona intracraneal supera 1,3 veces el volumen intracraneal estimado (eTIV) publicado por OASIS.
+
+\subsection{Segmentación de los ventrículos laterales}
+ 
+Los ventrículos laterales se segmentaron combinando un atlas anatómico con el umbral de intensidad. Se utilizaron las etiquetas de ventrículo lateral izquierdo y derecho del atlas subcortical Harvard-Oxford, que se llevaron al espacio de cada visita con las transformaciones ya calculadas en la extracción del cerebro (atlas $\rightarrow$ primera visita y, en las visitas siguientes, primera visita $\rightarrow$ visita actual). Para cada ventrículo:
+ 
+\begin{enumerate}
+    \item Se delimitó una región de búsqueda de 8~mm alrededor de la etiqueta del atlas, lo que permite detectar ventrículos agrandados sin buscar líquido cefalorraquídeo en toda la cabeza.
+    \item Dentro de esa región y de la zona intracraneal, se seleccionaron los vóxeles oscuros: aquellos con intensidad, tras un suavizado gaussiano de 0,6~mm, menor o igual al umbral de tejido más una pequeña tolerancia por volumen parcial (0,025).
+    \item Se separaron ambos hemisferios con un plano medio estimado a partir de las dos etiquetas del atlas.
+    \item Se identificaron las regiones conectadas (vecindad de seis vóxeles) y se conservó la que más se superpone con la etiqueta del atlas, junto con otros fragmentos relevantes superpuestos a ella.
+\end{enumerate}
+ 
+Cada segmentación recibe un estado de control: se marca para revisión si el atlas no se superpone con la imagen, si no se encuentran regiones candidatas, si la región cubre menos del 12\% de la etiqueta del atlas o si el volumen total queda fuera del rango de 2 a 120~ml. Cuando no se detecta ningún problema, el estado indica únicamente que la máscara debe inspeccionarse visualmente en el reporte (\texttt{REVISAR\_MASCARA}).
+ 
+
+\subsection{Medidas}
+ 
+En cada visita se calculan las siguientes medidas:
+\begin{itemize}
+    \item \textbf{Volumen de tejido cerebral} (ml): sustancia gris y blanca dentro de la zona intracraneal.
+    \item \textbf{nWBV propio}: volumen de tejido dividido por el eTIV publicado por OASIS, para comparar con el nWBV del dataset.
+    \item \textbf{Volumen ventricular} (ml): ventrículos laterales.
+    \item \textbf{Fracción ventricular} (\%): volumen ventricular dividido por el volumen de la zona intracraneal. Como la zona es la misma en todas las visitas de un paciente, actúa como referencia fija y permite comparar pacientes con cabezas de distinto tamaño.
+\end{itemize}
+
+\subsection{Análisis longitudinal y clínico}
+ 
+Para cada paciente se calcularon, respecto de la primera visita y entre visitas consecutivas, los cambios de volumen cerebral y ventricular (en ml y en porcentaje), las tasas de cambio en ml/año y la variación de la fracción ventricular. Las tasas anuales reportadas en los resultados se obtuvieron mediante regresión lineal sobre todas las visitas, lo que reduce la influencia del error de cada medición individual. Estos cambios se analizaron junto con la evolución del CDR y del MMSE de cada visita, y se compararon con la variación del nWBV publicado por OASIS.
+ 
+Como salidas del procesamiento se generó un reporte en PDF por paciente, con las imágenes de cada etapa, y se exportaron las máscaras ventriculares de cada visita en formato NIfTI, con la misma ubicación espacial que la adquisición original, para poder inspeccionarlas en un visor externo. Además, la última visita de cada paciente se remuestreó sobre la grilla de la primera mediante el registro rígido, lo que permite comparar ambos estudios sobre los mismos cortes anatómicos.
+
+\subsection{Validación}
+ 
+El método se evaluó de tres formas:
+\begin{itemize}
+    \item \textbf{Concordancia con OASIS}: se comparó la tasa de atrofia obtenida (variación anual del nWBV propio) con la del nWBV publicado por OASIS (Marcus et al., 2010), calculado por los autores con su propio método automático.
+    \item \textbf{Test-retest (precisión)}: en cada visita, OASIS adquirió entre tres y cuatro resonancias consecutivas. Como en esos minutos el cerebro no cambia, la diferencia entre medir por separado la primera y la segunda adquisición corresponde al error del método. Se evaluaron las dos primeras visitas de cada paciente.
+    \item \textbf{Segmentación manual externa (exactitud de los ventrículos)}: como OASIS no publica volúmenes ventriculares, se utilizó el conjunto de entrenamiento de MRBrainS18 (Kuijf et al., 2024; 7 sujetos mayores de 50 años con distintos grados de atrofia), en el que expertos segmentaron manualmente los ventrículos. La superposición se cuantificó con el coeficiente Dice, $D = 2|A \cap B| / (|A| + |B|)$, que vale 1 si ambas máscaras coinciden y 0 si no se superponen. La referencia manual incluye todos los ventrículos (laterales con sus astas temporales, tercero y cuarto), mientras que el método mide solo los ventrículos laterales.
+\end{itemize}
+
+\subsection{Implementación}
+ 
+El procesamiento se implementó en Python, utilizando NumPy y SciPy para el cálculo numérico y la morfología, SimpleITK para los registros y la corrección N4, nibabel para la lectura de las imágenes, nilearn para la obtención de los atlas MNI152 y Harvard-Oxford, pandas para los datos tabulares y Matplotlib para las figuras. El código se organizó en módulos según la etapa del procesamiento (lectura, acondicionamiento, extracción de características, interpretación, validación, visualización y reporte).
 
 \section{Resultados}
 
+\subsection{Validación del método}
+ 
+La Tabla~\ref{tab:validacion} resume las tres validaciones. La tasa de atrofia coincidió con la de OASIS en el paciente que desarrolló demencia (\textit{converted}) y en el paciente sano (1,02 y 1,18 veces la de OASIS, respectivamente), y fue mayor en los pacientes con demencia (1,27 y 1,56 veces); ambos métodos coincidieron en que el paciente sano es el de menor atrofia, seguido por el paciente \textit{converted}, y en que los pacientes con demencia son los de mayor atrofia, aunque invirtieron el orden entre estos dos últimos: para OASIS, OAS2\_0087 se atrofió más rápido que OAS2\_0048 ($-1{,}64$ frente a $-1{,}46$\,\% anual), mientras que el método propio obtuvo lo contrario ($-2{,}01$ frente a $-2{,}24$\,\% anual). En el ensayo test-retest, el error típico (mediana de las diferencias) fue de 6,9~ml (0,55\%) para el tejido cerebral y de 0,22~ml (0,48\%) para los ventrículos. Se observó un caso atípico (OAS2\_0127, visita 1), con una diferencia de 83~ml en el tejido y de solo 0,08~ml en los ventrículos, que se atribuye a una adquisición de menor calidad. Frente a la segmentación manual de MRBrainS18 se obtuvo un coeficiente Dice medio de 0,84 y una correlación de volúmenes de $r = 0{,}98$.
+ 
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{p{3.6cm} p{5.6cm} p{4.2cm}}
+\toprule
+\textbf{Validación} & \textbf{Medida} & \textbf{Resultado} \\
+\midrule
+Concordancia con OASIS & Tasa de atrofia propia / tasa de OASIS & Converted 1,02; sano 1,18; dementes 1,27 y 1,56 \\
+Test-retest & Error típico (mediana), tejido / ventrículos & 6,9~ml / 0,22~ml \\
+MRBrainS18 ($n = 7$) & Dice medio (rango) / correlación de volúmenes & 0,84 (0,74--0,91) / $r = 0{,}98$ \\
+\bottomrule
+\end{tabular}
+\caption{Resultados de las tres validaciones del método.}
+\label{tab:validacion}
+\end{table}
+ 
+El volumen ventricular resultó en promedio un 19\% menor que el de la referencia manual. Esta diferencia no es una medida del error del método: la referencia incluye el tercer y cuarto ventrículo y las astas temporales, que el método no segmenta, por lo que el volumen manual será siempre mayor. Por el mismo motivo, el coeficiente Dice obtenido es conservador, ya que también se ve penalizado por esas estructuras. Las medidas relevantes son la correlación de volúmenes ($r = 0{,}98$), que indica que el método ordena correctamente a los sujetos de menor a mayor volumen ventricular (lo necesario para seguir su evolución en el tiempo), y el Dice, que indica una buena superposición con la segmentación de expertos a pesar de esa diferencia de definición. En un sujeto (Dice 0,74) el registro del atlas quedó sobredimensionado, lo que fue detectado por el control de calidad.
+ 
+\subsection{Evolución por paciente}
+ 
+La Tabla~\ref{tab:pacientes} presenta la evolución de cada paciente. Las tasas se calcularon mediante regresión lineal sobre todas las visitas. La columna «Veces el error» compara el cambio ventricular total con el error del test-retest.
+ 
+\begin{table}[H]
+\centering
+\footnotesize
+
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{l c c c c c c c}
+\toprule
+\textbf{Paciente} & \begin{tabular}[c]{@{}c@{}}\textbf{Visitas /}\\\textbf{años}\end{tabular} & \begin{tabular}[c]{@{}c@{}}\textbf{Atrofia}\\\textbf{(\%/año)}\end{tabular} & \begin{tabular}[c]{@{}c@{}}\textbf{Ventrículos}\\\textbf{(ml/año)}\end{tabular} & \begin{tabular}[c]{@{}c@{}}\textbf{Fracción}\\\textbf{ventricular (\%)}\end{tabular} & \begin{tabular}[c]{@{}c@{}}\textbf{Veces el}\\\textbf{error}\end{tabular} & \textbf{CDR} & \textbf{MMSE} \\
+\midrule
+0070 (sano)      & 5 / 6,5 & $-0{,}61$ ($-0{,}55$) & $+1{,}35$ & 3,14 $\rightarrow$ 3,58 & 41 & 0 $\rightarrow$ 0   & 28 $\rightarrow$ 30 \\
+0127 (converted) & 5 / 7,2 & $-1{,}18$ ($-1{,}09$) & $+2{,}90$ & 2,51 $\rightarrow$ 3,75 & 97 & 0 $\rightarrow$ 0,5 & 29 $\rightarrow$ 30 \\
+0087 (demencia)  & 2 / 2,1 & $-2{,}01$ ($-1{,}64$) & $+1{,}66$ & 2,77 $\rightarrow$ 2,96 & 16 & 1 $\rightarrow$ 2   & 26 $\rightarrow$ 21 \\
+0048 (demencia)  & 5 / 3,4 & $-2{,}24$ ($-1{,}46$) & $+5{,}27$ & 3,13 $\rightarrow$ 4,09 & 83 & 1 $\rightarrow$ 1   & 19 $\rightarrow$ 4 \\
+\bottomrule
+\end{tabular}
+\caption{Evolución morfológica y clínica de cada paciente (OAS2\_XXXX). Atrofia: variación anual del nWBV propio (entre paréntesis, la de OASIS). Veces el error: cambio ventricular total dividido por el error del test-retest (0,22~ml). CDR (\textit{Clinical Dementia Rating}): grado de demencia (0 = normal; 0,5 = muy leve; 1 = leve; 2 = moderada). MMSE (\textit{Mini-Mental State Examination}): evaluación cognitiva de 0 a 30 puntos; valores menores a 24 sugieren deterioro cognitivo.}
+\label{tab:pacientes}
+\end{table}
+ 
+El paciente sano presentó la menor tasa de atrofia y de expansión ventricular, y OAS2\_0048 las mayores según el método propio (según OASIS, la mayor tasa de atrofia corresponde a OAS2\_0087). Este último es además el que mostró el mayor deterioro clínico, con una caída del MMSE de 19 a 4 puntos en 3,4 años.
+
+La Figura~\ref{fig:comparacion} muestra la comparación anatómica entre la primera y la última visita de OAS2\_0127, sobre los mismos cortes. Se observa el aumento del volumen de los ventrículos laterales a lo largo de los 7,2 años de seguimiento.
+ 
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.55\textwidth]{../Resultados/Graficos/ComparacionAnatomica/comparacion_ventricular_OAS2_0127}
+\caption{Ventrículos laterales de OAS2\_0127 en la primera (izquierda) y la última visita (derecha), sobre los mismos cortes sagital, coronal y axial. Contorno amarillo: segmentación automática.}
+\label{fig:comparacion}
+\end{figure}
+
 \section{Conclusiones}
+\subsection{Discusión}
+ 
+Los ventrículos resultaron un marcador más confiable que el volumen cerebral: su error de medición fue de 0,22~ml frente a 6,9~ml para el tejido, y su volumen aumentó de forma prácticamente monótona entre visitas, mientras que el del tejido fluctuó. El crecimiento ventricular superó el error de medición entre 16 y 97 veces según el paciente, por lo que no puede atribuirse a ruido del método.
+ 
+El paciente sano también presentó expansión ventricular. Esto es esperable: entre los 80 y los 86 años el cerebro pierde volumen por el envejecimiento normal, aun sin demencia, y como el cráneo no cambia, ese espacio es ocupado por líquido cefalorraquídeo que se acumula en los ventrículos y los surcos. Lo que distingue a la demencia no es la presencia de expansión ventricular sino su velocidad: OAS2\_0048 la presentó unas cuatro veces más rápido que el paciente sano. En el paciente sano, además, la pérdida de tejido en todo el seguimiento (4,4~ml) fue menor que el error de medición del tejido, mientras que el crecimiento ventricular (8,8~ml) lo superó 41 veces: en este caso, los ventrículos detectaron un cambio que el volumen cerebral no llegó a distinguir del error.
+ 
+Expresado en mililitros por año, el crecimiento ventricular de OAS2\_0087 (+1,66) resultó similar al del paciente sano (+1,35). Sin embargo, en términos relativos fue mayor (3,5\% anual frente a 2,3\%), y su atrofia cerebral fue más de tres veces más rápida ($-2{,}01$ frente a $-0{,}61$ \% anual, en concordancia con OASIS). Además, OAS2\_0087 cuenta con solo dos visitas separadas por dos años, por lo que su tasa proviene de un único intervalo y es mucho menos confiable que la del paciente sano, estimada con cinco visitas en 6,5 años. Con esa información no es posible caracterizar adecuadamente su expansión ventricular.
+ 
+En los pacientes con demencia, el método estimó una atrofia mayor que la de OASIS. En OAS2\_0048, la mayor parte de esa diferencia se concentra en un único intervalo: entre la segunda y la tercera visita, el nWBV propio disminuyó un 5,7\% en 1,1 años, frente a un 1,7\% en el de OASIS, y en el intervalo siguiente aumentó levemente (+0,3\%), mientras que el de OASIS siguió disminuyendo. Una caída de esa magnitud en un año triplica la medida por OASIS en el mismo paciente, y la recuperación posterior indica que probablemente la tercera visita quedó subestimada por un error de medición, y no que se trate de un cambio real. Esto concuerda con el caso atípico del test-retest: el volumen de tejido puede presentar errores puntuales de varios puntos porcentuales, que no se observaron en los ventrículos. Por este motivo, las tasas se estimaron por regresión sobre todas las visitas y las conclusiones se basan en la tendencia y no en visitas aisladas. Una posible explicación es que los vóxeles del límite entre tejido y líquido cefalorraquídeo, que contienen una mezcla de ambos, se cuentan enteros o se descartan enteros según el umbral; en cerebros que se atrofian rápidamente los surcos se ensanchan y aumenta la proporción de esos vóxeles. Por último, el volumen absoluto de los ventrículos está subestimado respecto de la referencia manual, pero, al ser una diferencia sistemática, no afecta la tasa de cambio.
+ 
+\subsection{Limitaciones}
+ 
+\begin{itemize}
+    \item Se analizó un paciente por grupo (dos en el caso de demencia), por lo que los resultados son descriptivos y no permiten generalizar.
+    \item OAS2\_0087 cuenta con solo dos visitas, lo que impide estimar una tendencia.
+    \item La ubicación inicial del atlas puede fallar en imágenes con menos ruido. Para saber dónde ubicarlo, el método construye una máscara aproximada del cerebro erosionando el tejido y conservando la región conectada más grande. Entre el cerebro y la cara o el cuello existen puentes finos de tejido: en una imagen ruidosa el ruido los interrumpe y la región más grande es solo el cerebro, pero en una imagen más limpia (como el promedio de adquisiciones o una resonancia de 3~T) los puentes permanecen, la región incluye la cara y el cuello, y el atlas se ubica en un lugar incorrecto. Esto ocurrió en 1 de los 7 sujetos de MRBrainS18 y fue detectado por el control de calidad.
+    \item Los resultados varían alrededor de un 1\% entre ejecuciones, debido a que la biblioteca de registro (SimpleITK) distribuye el cálculo entre varios hilos del procesador.
+    \item El test-retest mide el error dentro de una misma sesión, con el paciente en la misma posición. No incluye el error entre visitas, que suma el registro entre sesiones y las diferencias de posicionamiento y de adquisición, por lo que el error real al comparar dos visitas es mayor que el informado. En OAS2\_0048, la correlación del registro entre visitas disminuyó de 0,98 en la segunda visita a 0,89 en la quinta, y el salto del volumen de tejido entre la segunda y la tercera visita sugiere que ese error puede alcanzar varios puntos porcentuales en el tejido.
+\end{itemize}
+ 
+
 
 \section{Bibliografia}
 
 \begin{itemize}
     \item Fowler, K. D., Funt, J. M., Artyomov, M. N., Zeskind, B., Kolitz, S. E., \& Towfic, F. (2015). Leveraging existing data sets to generate new insights into Alzheimer's disease biology in specific patient subsets. Scientific Reports, 5, Artículo 14324. https://doi.org/10.1038/srep14324
-    \item Tustison, N. J., Avants, B. B., Cook, P. A., Zheng, Y., Egan, A., Yushkevich, P. A., & Gee, J. C. (2010). N4ITK: Improved N3 bias correction. IEEE Transactions on Medical Imaging, 29(6), 1310–1320. https://doi.org/10.1109/TMI.2010.2046908
+    \item Marcus, D. S., Fotenos, A. F., Csernansky, J. G., Morris, J. C., \& Buckner, R. L. (2010). Open access series of imaging studies: Longitudinal MRI data in nondemented and demented older adults. Journal of Cognitive Neuroscience, 22(12), 2677--2684.
+    \item Fonov, V., Evans, A. C., Botteron, K., Almli, C. R., McKinstry, R. C., Collins, D. L., \& Brain Development Cooperative Group (2011). Unbiased average age-appropriate atlases for pediatric studies. NeuroImage, 54(1), 313--327.
+    \item Tustison, N. J., Avants, B. B., Cook, P. A., Zheng, Y., Egan, A., Yushkevich, P. A., \& Gee, J. C. (2010). N4ITK: Improved N3 bias correction. IEEE Transactions on Medical Imaging, 29(6), 1310--1320. https://doi.org/10.1109/TMI.2010.2046908
+    \item Kuijf, H. J., Bennink, E., Vincken, K. L., Weaver, N., Biessels, G. J., \& Viergever, M. A. (2024). MR Brain Segmentation Challenge 2018 Data (V1) [Conjunto de datos]. DataverseNL. https://doi.org/10.34894/E0U32Q
 \end{itemize}
-
 
 
 
