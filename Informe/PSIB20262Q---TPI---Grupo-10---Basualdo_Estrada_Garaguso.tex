@@ -158,35 +158,25 @@ La Enfermedad de Alzheimer es un trastorno neurodegenerativo primario y progresi
 
 A nivel macroscópico, esta neurodegeneración sostenida se manifiesta como una severa atrofia estructural del encéfalo. El proceso atrófico provoca una reducción mensurable del volumen del tejido cerebral. Como consecuencia directa de esta pérdida progresiva de masa encefálica, se produce un fenómeno anatómico compensatorio conocido como expansión ventricular, donde se ensanchan drásticamente para ocupar el volumen intracraneal que el tejido muerto ha dejado vacío, llenándose de líquido cefalorraquídeo (LCR).
 
-La magnitud de esta degradación anatómica presenta una fuerte correlación con el deterioro cognitivo del paciente. Clínicamente, el grado de este deterioro se estandariza mediante herramientas de evaluación. Clínicamente, el grado de este deterioro se estandariza mediante herramientas de evaluación como la \textit{Clinical Dementia Rating} (CDR), que clasifica la demencia en normal (0), muy leve (0,5), leve (1), moderada (2) y severa (3), y el \textit{Mini-Mental State Examination} (MMSE), un test cognitivo de 0 a 30 puntos en el que valores menores a 24 sugieren deterioro.
-
-
-
-
-
+La magnitud de estos cambios anatómicos se relaciona con el deterioro cognitivo del paciente, evaluado mediante herramientas clínicas como la Clinical Dementia Rating (CDR), que clasifica la demencia en normal (0), muy leve (0,5), leve (1), moderada (2) y severa (3), y el Mini-Mental State Examination (MMSE), una prueba cognitiva de 0 a 30 puntos en la que valores menores a 24 sugieren deterioro.
 
 \subsubsection{Resonancia Magnética (MRI) y Secuencias T1}
-La Resonancia Magnética es una técnica de diagnóstico por imágenes no invasiva que emplea campos magnéticos estáticos y pulsos de radiofrecuencia para alinear y alterar transitoriamente el estado energético de los protones (átomos de hidrógeno) presentes en las moléculas de agua y grasa del cuerpo humano. A medida que estos protones regresan a su estado de equilibrio energético emiten señales electromagnéticas. Estas señales son capturadas por antenas receptoras y procesadas computacionalmente para reconstruir imágenes de altísima resolución espacial.
 
+La resonancia magnética es una técnica de diagnóstico por imágenes no invasiva que utiliza campos magnéticos y pulsos de radiofrecuencia para obtener señales de los protones presentes en los tejidos. Estas señales son captadas y procesadas para reconstruir imágenes anatómicas de alta resolución.
 
-Por su parte, la ponderación T1 está diseñada para explotar el tiempo de relajación longitudinal de los tejidos, maximizando el contraste anatómico. Esto se traduce en una escala de grises definida: el líquido cefalorraquídeo alojado en los ventrículos presenta se visualiza netamente hipointenso (negro u oscuro); la sustancia blanca, rica en lípidos debido a la mielina, se observa hiperintensa (blanca o clara); finalmente, la sustancia gris de la corteza cerebral adopta una señal isointensa (tonalidad gris intermedia).
-
-
-
+La ponderación T1 aprovecha las diferencias en los tiempos de relajación longitudinal de los tejidos, permitiendo distinguir sus estructuras. En estas imágenes, el líquido cefalorraquídeo (LCR) presenta una señal hipointensa (oscura), la sustancia blanca se observa hiperintensa (clara) y la sustancia gris presenta una intensidad intermedia.
 
 \subsection{Estado del Arte}
 
-El dataset proviene de una investigación realizada en la Escuela de Medicina de la Univeridad de Washington y fue publicada en el paper "Open access series of imaging studies: Longitudinal MRI data in nondemented and demented older adults", con el objetivo de generar opensource data para estimular la investigación. La base de datos posee resonacias magnéticas T1 de 150 sujetos (todos con mano derecha dominante) entre los 60 y 96 años con dos o más visitas separadas al menos un año. Se utilizó el Clinical Dementia Rating scale para determinar el nivel de demensia de los adultos lo cual se correlaciona con el avance de la enfermedad de Alzheimer. Para conocer el CDR score se analizan 6 dominios: memoria, orientación, resolución de problemas, cuidado personal, Hogar y pasatiempos y su desempeño en comunidad. Para CDR mayores a 0 se considera una demensia pequeña, y este criterio fue confirmado con examinacion histológica con un 93 \% de acierto. Por su parte, para reducir la relación señal-ruido y mejorar la calidad volumétrica, el protocolo de estudio estableció que para cada paciente se adquirieran de tres a cuatro imágenes individuales con ponderación T1 utilizando un resonador magnético Vision de 1.5 Tesla (Siemens, Erlangen, Alemania) en una misma sesión clínica
+El conjunto de datos OASIS-2 fue publicado por Marcus et al. (2010), de la Universidad de Washington, con el objetivo de facilitar la investigación del envejecimiento cerebral y la demencia. Contiene resonancias magnéticas T1 de 150 sujetos de entre 60 y 96 años, con dos o más visitas longitudinales y evaluaciones clínicas mediante la escala CDR.
 
+En cada sesión se adquirieron entre tres y cuatro imágenes utilizando un resonador Siemens Vision de 1,5~T. Estas adquisiciones permiten mejorar la relación señal-ruido mediante su alineación y promediado.
 
-Una gran importancia de la investigación realizada es analizar algunas técnicas de postprocesamiento utilizadas a principio de siglo, para obtener tres métricas fundamentales:El procesamiento volumétrico se fundamenta en el cálculo secuencial de tres métricas clave. 
-Inicialmente, el Volumen Intracraneal Total Estimado se obtiene mediante técnicas de registro espacial, alineando el cerebro del paciente con uno de referencia y multiplicando el volumen de este último por el determinante de la matriz de transformación afín. A partir de este, se determina el Volumen Cerebral Total Normalizado (nWBV), el cual representa el porcentaje del espacio intracraneal ocupado por masa encefálica viva. Este valor se extrae empleando herramientas de segmentación basadas en modelos estadísticos de Campos Aleatorios de Markov Ocultos, los cuales clasifican cada vóxel analizando tanto su nivel de brillo como su proximidad espacial. Finalmente, para evaluar el desgaste estructural longitudinal provocado por el Alzheimer, se calcula la Tasa de Atrofia Anual y se obtiene al restar el nWBV del segundo escaneo menos el del primero, normalizandolo. 
-
-
+El procesamiento original incluyó el registro espacial de las imágenes con un atlas para estimar el volumen intracraneal total (eTIV) y la segmentación del tejido cerebral mediante modelos estadísticos. A partir de estas mediciones se obtuvo el volumen cerebral normalizado (nWBV), utilizado para cuantificar la atrofia y comparar su evolución longitudinal. Estas métricas constituyen la referencia para evaluar el método desarrollado en este trabajo.
 
 \subsection{Objetivos}
 
-El objetivo principal de este proyecto es diseñar e implementar un algoritmo computacional capaz de cuantificar de manera objetiva la progresión de la atrofia estructural del cerebro asociada a la Enfermedad de Alzheimer. Mediante el procesamiento automatizado de imágenes por resonancia magnética (MRI), el sistema medirá métricamente la expansión de los ventrículos cerebrales (consecuencia directa de la pérdida de masa encefálica) y evaluará la degradación del tejido anatómico circundante. Este análisis se fundamentará en la comparación temporal de estudios longitudinales de un mismo paciente, permitiendo trazar la evolución morfológica de la enfermedad a lo largo del tiempo.
+El objetivo de este proyecto es desarrollar un algoritmo computacional que permita cuantificar la progresión de la atrofia cerebral asociada al Alzheimer mediante resonancias magnéticas T1. Para ello, se analiza la evolución longitudinal del volumen cerebral, la expansión de los ventrículos laterales y las características de textura del tejido periventricular, relacionando estos indicadores con la información clínica de cada paciente.
 
 \section{Materiales y Métodos}
 \subsection{Datos}
@@ -242,7 +232,10 @@ Los ventrículos laterales se segmentaron combinando un atlas anatómico con el 
 \end{enumerate}
  
 Cada segmentación recibe un estado de control: se marca para revisión si el atlas no se superpone con la imagen, si no se encuentran regiones candidatas, si la región cubre menos del 12\% de la etiqueta del atlas o si el volumen total queda fuera del rango de 2 a 120~ml. Cuando no se detecta ningún problema, el estado indica únicamente que la máscara debe inspeccionarse visualmente en el reporte (\texttt{REVISAR\_MASCARA}).
- 
+
+\subsection{Análisis de textura periventricular}
+
+Para complementar las mediciones volumétricas, se analizó la textura del tejido que rodea los ventrículos laterales. A partir de la segmentación ventricular se delimitó una banda de 4~mm mediante una dilatación morfológica, excluyendo posteriormente el líquido cefalorraquídeo. Sobre las imágenes normalizadas se calcularon matrices de coocurrencia de niveles de gris (GLCM), utilizando 32 niveles de intensidad, una distancia de un vóxel y cuatro orientaciones ($0^\circ$, $45^\circ$, $90^\circ$ y $135^\circ$). Se obtuvieron cinco características: contraste, homogeneidad, energía, correlación y entropía, que permiten describir la distribución espacial y la variabilidad de las intensidades. Además, se calcularon la media y el desvío estándar de la región.
 
 \subsection{Medidas}
  
@@ -252,11 +245,13 @@ En cada visita se calculan las siguientes medidas:
     \item \textbf{nWBV propio}: volumen de tejido dividido por el eTIV publicado por OASIS, para comparar con el nWBV del dataset.
     \item \textbf{Volumen ventricular} (ml): ventrículos laterales.
     \item \textbf{Fracción ventricular} (\%): volumen ventricular dividido por el volumen de la zona intracraneal. Como la zona es la misma en todas las visitas de un paciente, actúa como referencia fija y permite comparar pacientes con cabezas de distinto tamaño.
+    \item \textbf{Características de textura}: contraste, homogeneidad, energía, correlación y entropía de la banda periventricular, junto con la media y el desvío estándar de sus intensidades.
 \end{itemize}
 
 \subsection{Análisis longitudinal y clínico}
  
-Para cada paciente se calcularon, respecto de la primera visita y entre visitas consecutivas, los cambios de volumen cerebral y ventricular (en ml y en porcentaje), las tasas de cambio en ml/año y la variación de la fracción ventricular. Las tasas anuales reportadas en los resultados se obtuvieron mediante regresión lineal sobre todas las visitas, lo que reduce la influencia del error de cada medición individual. Estos cambios se analizaron junto con la evolución del CDR y del MMSE de cada visita, y se compararon con la variación del nWBV publicado por OASIS.
+Para cada paciente se calcularon, respecto de la primera visita y entre visitas consecutivas, los cambios de volumen cerebral y ventricular (en ml y en porcentaje), las tasas de cambio en ml/año y la variación de la fracción ventricular. Las tasas anuales reportadas en los resultados se obtuvieron mediante regresión lineal sobre todas las visitas, lo que reduce la influencia del error de cada medición individual. Estos cambios se analizaron junto con la evolución del CDR y del MMSE de cada visita, y se compararon con la variación del nWBV publicado por OASIS. 
+También se calcularon las variaciones porcentuales de las características de textura respecto de la primera visita y sus tasas anuales mediante regresión lineal, para evaluar su evolución temporal.
  
 Como salidas del procesamiento se generó un reporte en PDF por paciente, con las imágenes de cada etapa, y se exportaron las máscaras ventriculares de cada visita en formato NIfTI, con la misma ubicación espacial que la adquisición original, para poder inspeccionarlas en un visor externo. Además, la última visita de cada paciente se remuestreó sobre la grilla de la primera mediante el registro rígido, lo que permite comparar ambos estudios sobre los mismos cortes anatómicos.
 
@@ -267,18 +262,19 @@ El método se evaluó de tres formas:
     \item \textbf{Concordancia con OASIS}: se comparó la tasa de atrofia obtenida (variación anual del nWBV propio) con la del nWBV publicado por OASIS (Marcus et al., 2010), calculado por los autores con su propio método automático.
     \item \textbf{Test-retest (precisión)}: en cada visita, OASIS adquirió entre tres y cuatro resonancias consecutivas. Como en esos minutos el cerebro no cambia, la diferencia entre medir por separado la primera y la segunda adquisición corresponde al error del método. Se evaluaron las dos primeras visitas de cada paciente.
     \item \textbf{Segmentación manual externa (exactitud de los ventrículos)}: como OASIS no publica volúmenes ventriculares, se utilizó el conjunto de entrenamiento de MRBrainS18 (Kuijf et al., 2024; 7 sujetos mayores de 50 años con distintos grados de atrofia), en el que expertos segmentaron manualmente los ventrículos. La superposición se cuantificó con el coeficiente Dice, $D = 2|A \cap B| / (|A| + |B|)$, que vale 1 si ambas máscaras coinciden y 0 si no se superponen. La referencia manual incluye todos los ventrículos (laterales con sus astas temporales, tercero y cuarto), mientras que el método mide solo los ventrículos laterales.
+    \item \textbf{Test-retest (precisión)}: se compararon las dos primeras adquisiciones de una misma sesión, cuya anatomía permanece prácticamente constante, para estimar la variabilidad del método. Se evaluaron el volumen cerebral, el ventricular y tres características de textura (contraste, homogeneidad y entropía) en las dos primeras visitas de cada paciente.
 \end{itemize}
 
 \subsection{Implementación}
  
-El procesamiento se implementó en Python, utilizando NumPy y SciPy para el cálculo numérico y la morfología, SimpleITK para los registros y la corrección N4, nibabel para la lectura de las imágenes, nilearn para la obtención de los atlas MNI152 y Harvard-Oxford, pandas para los datos tabulares y Matplotlib para las figuras. El código se organizó en módulos según la etapa del procesamiento (lectura, acondicionamiento, extracción de características, interpretación, validación, visualización y reporte).
+El procesamiento se implementó en Python, utilizando NumPy y SciPy para el cálculo numérico y la morfología, SimpleITK para los registros y la corrección N4, nibabel para la lectura de las imágenes, nilearn para la obtención de los atlas MNI152 y Harvard-Oxford, scikit-image para el análisis de textura, pandas para los datos tabulares y Matplotlib para las figuras. El código se organizó en módulos según la etapa del procesamiento (lectura, acondicionamiento, extracción de características, interpretación, validación, visualización y reporte).
 
 \section{Resultados}
 
 \subsection{Validación del método}
- 
-La Tabla~\ref{tab:validacion} resume las tres validaciones. La tasa de atrofia coincidió con la de OASIS en el paciente que desarrolló demencia (\textit{converted}) y en el paciente sano (1,02 y 1,18 veces la de OASIS, respectivamente), y fue mayor en los pacientes con demencia (1,27 y 1,56 veces); ambos métodos coincidieron en que el paciente sano es el de menor atrofia, seguido por el paciente \textit{converted}, y en que los pacientes con demencia son los de mayor atrofia, aunque invirtieron el orden entre estos dos últimos: para OASIS, OAS2\_0087 se atrofió más rápido que OAS2\_0048 ($-1{,}64$ frente a $-1{,}46$\,\% anual), mientras que el método propio obtuvo lo contrario ($-2{,}01$ frente a $-2{,}24$\,\% anual). En el ensayo test-retest, el error típico (mediana de las diferencias) fue de 6,9~ml (0,55\%) para el tejido cerebral y de 0,22~ml (0,48\%) para los ventrículos. Se observó un caso atípico (OAS2\_0127, visita 1), con una diferencia de 83~ml en el tejido y de solo 0,08~ml en los ventrículos, que se atribuye a una adquisición de menor calidad. Frente a la segmentación manual de MRBrainS18 se obtuvo un coeficiente Dice medio de 0,84 y una correlación de volúmenes de $r = 0{,}98$.
- 
+
+La Tabla~\ref{tab:validacion} resume las tres validaciones realizadas. Las tasas de atrofia obtenidas fueron similares a las de OASIS en el paciente sano y el convertido (1,18 y 1,02 veces las publicadas, respectivamente), mientras que en los pacientes con demencia fueron mayores (1,27 y 1,56 veces). En el test-retest, el error típico fue de 6,9~ml (0,55\%) para el tejido cerebral y de 0,22~ml (0,48\%) para los ventrículos. Se identificó un caso atípico en OAS2\_0127, con una diferencia de 83~ml de tejido entre adquisiciones. Finalmente, la comparación con MRBrainS18 obtuvo un coeficiente Dice medio de 0,84 y una correlación de volúmenes de $r=0{,}98$.
+
 \begin{table}[H]
 \centering
 \small
@@ -295,7 +291,7 @@ MRBrainS18 ($n = 7$) & Dice medio (rango) / correlación de volúmenes & 0,84 (0
 \label{tab:validacion}
 \end{table}
  
-El volumen ventricular resultó en promedio un 19\% menor que el de la referencia manual. Esta diferencia no es una medida del error del método: la referencia incluye el tercer y cuarto ventrículo y las astas temporales, que el método no segmenta, por lo que el volumen manual será siempre mayor. Por el mismo motivo, el coeficiente Dice obtenido es conservador, ya que también se ve penalizado por esas estructuras. Las medidas relevantes son la correlación de volúmenes ($r = 0{,}98$), que indica que el método ordena correctamente a los sujetos de menor a mayor volumen ventricular (lo necesario para seguir su evolución en el tiempo), y el Dice, que indica una buena superposición con la segmentación de expertos a pesar de esa diferencia de definición. En un sujeto (Dice 0,74) el registro del atlas quedó sobredimensionado, lo que fue detectado por el control de calidad.
+El volumen ventricular estimado fue, en promedio, un 19\% menor que la referencia manual. Esta diferencia se explica parcialmente porque MRBrainS18 incluye estructuras ventriculares adicionales que nuestro método no segmenta, lo que también afecta al coeficiente Dice. Sin embargo, la elevada correlación de volúmenes ($r=0{,}98$) indica una buena concordancia entre las mediciones de ambos métodos. En uno de los sujetos se detectó un registro incorrecto del atlas, identificado mediante el control de calidad.
  
 \subsection{Evolución por paciente}
  
@@ -331,17 +327,19 @@ La Figura~\ref{fig:comparacion} muestra la comparación anatómica entre la prim
 \label{fig:comparacion}
 \end{figure}
 
+El análisis de textura periventricular del paciente OAS2\_0048 mostró un aumento general del contraste y la entropía, acompañado de una disminución de la homogeneidad y la energía, aunque con variaciones entre visitas. La región analizada, su matriz GLCM y la evolución longitudinal de estas características se presentan en el Anexo, Figuras~\ref{fig:banda_textura}, \ref{fig:glcm_textura} y \ref{fig:evolucion_textura}.
+
 \section{Conclusiones}
 \subsection{Discusión}
- 
-Los ventrículos resultaron un marcador más confiable que el volumen cerebral: su error de medición fue de 0,22~ml frente a 6,9~ml para el tejido, y su volumen aumentó de forma prácticamente monótona entre visitas, mientras que el del tejido fluctuó. El crecimiento ventricular superó el error de medición entre 16 y 97 veces según el paciente, por lo que no puede atribuirse a ruido del método.
- 
-El paciente sano también presentó expansión ventricular. Esto es esperable: entre los 80 y los 86 años el cerebro pierde volumen por el envejecimiento normal, aun sin demencia, y como el cráneo no cambia, ese espacio es ocupado por líquido cefalorraquídeo que se acumula en los ventrículos y los surcos. Lo que distingue a la demencia no es la presencia de expansión ventricular sino su velocidad: OAS2\_0048 la presentó unas cuatro veces más rápido que el paciente sano. En el paciente sano, además, la pérdida de tejido en todo el seguimiento (4,4~ml) fue menor que el error de medición del tejido, mientras que el crecimiento ventricular (8,8~ml) lo superó 41 veces: en este caso, los ventrículos detectaron un cambio que el volumen cerebral no llegó a distinguir del error.
- 
-Expresado en mililitros por año, el crecimiento ventricular de OAS2\_0087 (+1,66) resultó similar al del paciente sano (+1,35). Sin embargo, en términos relativos fue mayor (3,5\% anual frente a 2,3\%), y su atrofia cerebral fue más de tres veces más rápida ($-2{,}01$ frente a $-0{,}61$ \% anual, en concordancia con OASIS). Además, OAS2\_0087 cuenta con solo dos visitas separadas por dos años, por lo que su tasa proviene de un único intervalo y es mucho menos confiable que la del paciente sano, estimada con cinco visitas en 6,5 años. Con esa información no es posible caracterizar adecuadamente su expansión ventricular.
- 
-En los pacientes con demencia, el método estimó una atrofia mayor que la de OASIS. En OAS2\_0048, la mayor parte de esa diferencia se concentra en un único intervalo: entre la segunda y la tercera visita, el nWBV propio disminuyó un 5,7\% en 1,1 años, frente a un 1,7\% en el de OASIS, y en el intervalo siguiente aumentó levemente (+0,3\%), mientras que el de OASIS siguió disminuyendo. Una caída de esa magnitud en un año triplica la medida por OASIS en el mismo paciente, y la recuperación posterior indica que probablemente la tercera visita quedó subestimada por un error de medición, y no que se trate de un cambio real. Esto concuerda con el caso atípico del test-retest: el volumen de tejido puede presentar errores puntuales de varios puntos porcentuales, que no se observaron en los ventrículos. Por este motivo, las tasas se estimaron por regresión sobre todas las visitas y las conclusiones se basan en la tendencia y no en visitas aisladas. Una posible explicación es que los vóxeles del límite entre tejido y líquido cefalorraquídeo, que contienen una mezcla de ambos, se cuentan enteros o se descartan enteros según el umbral; en cerebros que se atrofian rápidamente los surcos se ensanchan y aumenta la proporción de esos vóxeles. Por último, el volumen absoluto de los ventrículos está subestimado respecto de la referencia manual, pero, al ser una diferencia sistemática, no afecta la tasa de cambio.
- 
+
+Las mediciones ventriculares resultaron más estables que las del tejido cerebral en el ensayo test-retest, con errores típicos de 0,22~ml (0,48\%) y 6,9~ml (0,55\%), respectivamente. Además, los ventrículos presentaron una expansión prácticamente monótona, mientras que el volumen cerebral mostró fluctuaciones. El crecimiento ventricular acumulado superó entre 16 y 97 veces la variabilidad intrasesión estimada.
+
+El paciente sano también presentó expansión ventricular, compatible con el envejecimiento normal. Sin embargo, OAS2\_0048 mostró una velocidad de crecimiento aproximadamente cuatro veces mayor. Por su parte, OAS2\_0087 presentó una tasa de atrofia cerebral elevada, aunque sus dos únicas visitas limitan la confiabilidad del seguimiento.
+
+En los pacientes con demencia, el método estimó tasas de atrofia superiores a las publicadas por OASIS. En OAS2\_0048 se observó una caída pronunciada del volumen cerebral entre MR2 y MR3, seguida de una leve recuperación, lo que sugiere un posible error de segmentación asociado al efecto de volumen parcial entre tejido y líquido cefalorraquídeo. Por ello, las tendencias se estimaron mediante regresión lineal sobre todas las visitas, evitando basar las conclusiones en mediciones aisladas.
+
+Finalmente, el análisis de textura complementó las mediciones volumétricas al caracterizar la distribución espacial de intensidades del tejido periventricular. Sin embargo, sus variaciones no pueden atribuirse directamente a procesos neurodegenerativos sin una validación adicional.
+
 \subsection{Limitaciones}
  
 \begin{itemize}
@@ -350,11 +348,43 @@ En los pacientes con demencia, el método estimó una atrofia mayor que la de OA
     \item La ubicación inicial del atlas puede fallar en imágenes con menos ruido. Para saber dónde ubicarlo, el método construye una máscara aproximada del cerebro erosionando el tejido y conservando la región conectada más grande. Entre el cerebro y la cara o el cuello existen puentes finos de tejido: en una imagen ruidosa el ruido los interrumpe y la región más grande es solo el cerebro, pero en una imagen más limpia (como el promedio de adquisiciones o una resonancia de 3~T) los puentes permanecen, la región incluye la cara y el cuello, y el atlas se ubica en un lugar incorrecto. Esto ocurrió en 1 de los 7 sujetos de MRBrainS18 y fue detectado por el control de calidad.
     \item Los resultados varían alrededor de un 1\% entre ejecuciones, debido a que la biblioteca de registro (SimpleITK) distribuye el cálculo entre varios hilos del procesador.
     \item El test-retest mide el error dentro de una misma sesión, con el paciente en la misma posición. No incluye el error entre visitas, que suma el registro entre sesiones y las diferencias de posicionamiento y de adquisición, por lo que el error real al comparar dos visitas es mayor que el informado. En OAS2\_0048, la correlación del registro entre visitas disminuyó de 0,98 en la segunda visita a 0,89 en la quinta, y el salto del volumen de tejido entre la segunda y la tercera visita sugiere que ese error puede alcanzar varios puntos porcentuales en el tejido.
+    \item La textura depende de la calidad de las imágenes y de la segmentación ventricular. Además, la banda analizada puede comprender distintos vóxeles entre visitas.
+
 \end{itemize}
  
+\clearpage
+\appendix
+\section{Análisis de textura periventricular}
 
+La Figura~\ref{fig:banda_textura} muestra la región de tejido cerebral utilizada para el análisis de textura, delimitada mediante una dilatación morfológica de 4~mm alrededor de los ventrículos laterales.
 
-\section{Bibliografia}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{Imagenes/banda_textura.png}
+    \caption{Banda periventricular del paciente OAS2\_0048 (MR1). En amarillo se representan los ventrículos segmentados y en magenta la región utilizada para el análisis de textura.}
+    \label{fig:banda_textura}
+\end{figure}
+
+La Figura~\ref{fig:glcm_textura} presenta la matriz GLCM obtenida a partir de dicha región, utilizada para calcular las características de textura.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.60\textwidth]{Imagenes/glcm_textura.png}
+    \caption{Matriz de coocurrencia de niveles de gris (GLCM) del paciente OAS2\_0048 (MR1).}
+    \label{fig:glcm_textura}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{../Resultados/Interfaz/OAS2_0048/Graficos/textura_OAS2_0048.png}
+    \caption{Evolución longitudinal de las características de textura periventricular del paciente OAS2\_0048, expresadas como variación porcentual respecto de MR1.}
+    \label{fig:evolucion_textura}
+\end{figure}
+
+\clearpage
+\section*{Bibliografía}
+\phantomsection
+\addcontentsline{toc}{section}{Bibliografía}
 
 \begin{itemize}
     \item Fowler, K. D., Funt, J. M., Artyomov, M. N., Zeskind, B., Kolitz, S. E., \& Towfic, F. (2015). Leveraging existing data sets to generate new insights into Alzheimer's disease biology in specific patient subsets. Scientific Reports, 5, Artículo 14324. https://doi.org/10.1038/srep14324
