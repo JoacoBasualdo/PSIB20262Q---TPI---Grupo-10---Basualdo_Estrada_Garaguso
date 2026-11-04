@@ -6,6 +6,7 @@
 #   - Volumen cerebral: cambio desde MR1 y entre visitas, tasas en ml/año.
 #   - Ventrículos: cambio desde MR1 (ml, % y fracción ventricular).
 #   - Relación con la clínica: CDR y MMSE junto con los cambios morfológicos.
+#   - Textura del tejido periventricular: cambio de cada característica desde MR1.
 # No procesa imágenes: solo trabaja sobre la tabla. Los gráficos están en Visualizacion.py.
 
 import numpy as np
@@ -424,3 +425,48 @@ def analizar_evolucion_clinica(datos):
     resumen = pd.DataFrame(resumen)
 
     return detalle, resumen
+
+
+# ============================================================
+# TEXTURA DEL TEJIDO PERIVENTRICULAR
+# ============================================================
+
+# Para cada característica de textura (columnas 'textura_...' de la tabla de visitas):
+#   - cambio desde MR1 en % (cambio_<caracteristica>_pct)
+#   - tasa de cambio en % por año, como pendiente de la recta sobre todas las visitas
+#     dividida por el valor de MR1 (tasa_<caracteristica>_pct_anio)
+# Devuelve la tabla por visita con los cambios y un resumen por paciente con las tasas.
+def calcular_cambios_textura(datos, caracteristicas=("contraste", "homogeneidad", "energia",
+                                                     "correlacion", "entropia")):
+    columnas = [f"textura_{c}" for c in caracteristicas if f"textura_{c}" in datos.columns]
+    tabla = datos.copy().sort_values(["paciente", "anios_desde_primera", "visita"]).reset_index(drop=True)
+    grupos = tabla.groupby("paciente", sort=False)
+
+    for columna in columnas:
+        nombre = columna.replace("textura_", "")
+        inicial = grupos[columna].transform(lambda x: x.iloc[0])
+        tabla[f"cambio_{nombre}_pct"] = np.where(
+            np.isfinite(inicial) & (inicial != 0),
+            100 * (tabla[columna] - inicial) / inicial,
+            np.nan
+        )
+
+    resumen = []
+    for paciente, visitas in tabla.groupby("paciente", sort=False):
+        fila = {
+            "paciente": paciente,
+            "grupo": visitas["grupo"].iloc[0],
+            "visitas": len(visitas),
+            "anios_seguimiento": round(float(visitas["anios_desde_primera"].max()), 2),
+        }
+        for columna in columnas:
+            nombre = columna.replace("textura_", "")
+            validas = visitas[np.isfinite(visitas[columna])]
+            if len(validas) >= 2 and validas[columna].iloc[0] != 0:
+                pendiente = np.polyfit(validas["anios_desde_primera"], validas[columna], 1)[0]
+                fila[f"tasa_{nombre}_pct_anio"] = round(100 * pendiente / validas[columna].iloc[0], 2)
+            else:
+                fila[f"tasa_{nombre}_pct_anio"] = np.nan
+        resumen.append(fila)
+
+    return tabla, pd.DataFrame(resumen)

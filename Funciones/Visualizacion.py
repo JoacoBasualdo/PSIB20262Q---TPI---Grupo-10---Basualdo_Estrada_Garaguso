@@ -432,15 +432,11 @@ def visualizar_comparacion_ventricular(
 
 # ----------------------------- EVOLUCIÓN -----------------------------
 
-# Un gráfico por paciente: variación del nWBV propio y del de OASIS desde MR1, con la recta de regresión de cada uno.
+# Un gráfico por paciente: cambio del volumen cerebral propio y del nWBV de OASIS desde MR1.
 def guardar_graficos_evolucion(evolucion, carpeta_salida):
     """
-    Genera un gráfico por paciente con el nWBV propio y el de OASIS-2, expresados como
-    variación respecto de la primera visita (%). Se compara la MISMA medida (tejido /
-    volumen intracraneal) en ambos métodos. Además de los puntos de cada visita, se
-    dibuja la recta de regresión de cada método, cuya pendiente es la tasa de atrofia
-    que se reporta: así se ve que la conclusión depende de la tendencia de todas las
-    visitas y no de un punto aislado.
+    Genera un gráfico por paciente mostrando los cambios
+    relativos del volumen cerebral y del nWBV de OASIS-2.
     """
 
     os.makedirs(carpeta_salida, exist_ok=True)
@@ -450,48 +446,98 @@ def guardar_graficos_evolucion(evolucion, carpeta_salida):
     for paciente, grupo in evolucion.groupby("paciente"):
 
         grupo = grupo.sort_values("anios_desde_primera")
-        tiempo = grupo["anios_desde_primera"].to_numpy(dtype=float)
 
-        # Variación del nWBV respecto de la primera visita, en %
-        propio = 100 * (grupo["nwbv_propio"] / grupo["nwbv_propio"].iloc[0] - 1)
-        oasis = 100 * (grupo["nwbv_oasis"] / grupo["nwbv_oasis"].iloc[0] - 1)
+        tiempo = grupo["anios_desde_primera"]
+
+        cambio_volumen = grupo["cambio_desde_inicio_pct"]
+
+        cambio_oasis = grupo["cambio_relativo_nwbv_oasis_pct"]
+
+        # ----------------------------------------------------
+        # CREACIÓN DEL GRÁFICO
+        # ----------------------------------------------------
 
         fig, ax = plt.subplots(figsize=(9, 5))
 
-        series = [
-            (propio.to_numpy(dtype=float), "Método propio", "tab:blue", "o"),
-            (oasis.to_numpy(dtype=float), "OASIS-2", "tab:orange", "s"),
-        ]
+        ax.plot(
+            tiempo,
+            cambio_volumen,
+            marker="o",
+            linewidth=2,
+            label="Volumen cerebral calculado (%)"
+        )
 
-        for valores, nombre, color, marcador in series:
-            texto = nombre
-            if len(tiempo) >= 2:
-                # Recta de regresión: su pendiente es la tasa de atrofia (% por año)
-                pendiente, ordenada = np.polyfit(tiempo, valores, 1)
-                texto = f"{nombre}: {pendiente:+.2f} %/año"
-                ax.plot(tiempo, pendiente * tiempo + ordenada, color=color,
-                        linewidth=2, linestyle="--", alpha=0.8)
-            # Visitas: puntos unidos por una línea fina
-            ax.plot(tiempo, valores, color=color, marker=marcador, linewidth=1,
-                    alpha=0.6, label=texto)
+        ax.plot(
+            tiempo,
+            cambio_oasis,
+            marker="s",
+            linestyle="--",
+            linewidth=2,
+            label="nWBV OASIS-2 (%)"
+        )
 
         # Línea de referencia: primera visita
-        ax.axhline(y=0, linestyle=":", color="gray", linewidth=1)
+        ax.axhline(
+            y=0,
+            linestyle=":",
+            color="gray",
+            linewidth=1
+        )
 
-        # Identificación de las visitas (sobre la curva propia)
-        for t, v, visita in zip(tiempo, propio, grupo["visita"]):
-            ax.annotate(f"MR{int(visita)}", (t, v), xytext=(5, 8),
-                        textcoords="offset points", fontsize=9)
+        # ----------------------------------------------------
+        # IDENTIFICACIÓN DE LAS VISITAS
+        # ----------------------------------------------------
 
-        ax.set_title(f"Evolución del nWBV - {paciente}")
-        ax.set_xlabel("Años desde la primera visita")
-        ax.set_ylabel("Variación del nWBV respecto de la primera visita (%)")
+        for _, fila in grupo.iterrows():
+
+            ax.annotate(
+                f"MR{int(fila['visita'])}",
+                (
+                    fila["anios_desde_primera"],
+                    fila["cambio_desde_inicio_pct"]
+                ),
+                xytext=(5, 8),
+                textcoords="offset points",
+                fontsize=9
+            )
+
+        # ----------------------------------------------------
+        # FORMATO DEL GRÁFICO
+        # ----------------------------------------------------
+
+        ax.set_title(
+            f"Evolución del volumen cerebral - {paciente}"
+        )
+
+        ax.set_xlabel(
+            "Años desde la primera visita"
+        )
+
+        ax.set_ylabel(
+            "Variación respecto de la primera visita (%)"
+        )
+
         ax.grid(alpha=0.3)
-        ax.legend(title="Línea punteada: regresión (tasa de atrofia)", fontsize=9, title_fontsize=9)
+
+        ax.legend()
+
         fig.tight_layout()
 
-        ruta = os.path.join(carpeta_salida, f"evolucion_{paciente}.png")
-        fig.savefig(ruta, dpi=180, bbox_inches="tight")
+        # ----------------------------------------------------
+        # GUARDAR EN RESULTADOS
+        # ----------------------------------------------------
+
+        ruta = os.path.join(
+            carpeta_salida,
+            f"evolucion_{paciente}.png"
+        )
+
+        fig.savefig(
+            ruta,
+            dpi=180,
+            bbox_inches="tight"
+        )
+
         plt.close(fig)
 
         rutas_guardadas.append(ruta)
@@ -787,3 +833,124 @@ def graficar_histograma_bias(antes, despues, titulo="Histograma antes y después
     eje.legend()
     plt.tight_layout()
     return fig
+
+
+# =============================================================================
+# TEXTURA DEL TEJIDO PERIVENTRICULAR
+# =============================================================================
+
+# Tres planos con los ventrículos (contorno amarillo) y la banda periventricular donde se
+# mide la textura (en magenta, semitransparente). Los cortes se eligen donde la banda tiene
+# más vóxeles, igual que en visualizar_ventriculos.
+def visualizar_banda_textura(normalizada, mascara_ventricular, mascara_banda, titulo,
+                             tamano_voxel=(1.0, 1.0, 1.25)):
+    referencia = mascara_banda if np.any(mascara_banda) else mascara_ventricular
+    if np.any(referencia):
+        indice_sagital = int(np.argmax(referencia.sum(axis=(0, 1))))
+        indice_coronal = int(np.argmax(referencia.sum(axis=(1, 2))))
+        indice_axial = int(np.argmax(referencia.sum(axis=(0, 2))))
+    else:
+        indice_coronal, indice_axial, indice_sagital = (dim // 2 for dim in normalizada.shape)
+
+    def cortar(volumen):
+        return [
+            np.rot90(volumen[:, :, indice_sagital]),
+            np.flipud(volumen[indice_coronal, :, :]),
+            np.flipud(volumen[:, indice_axial, :]),
+        ]
+
+    from matplotlib.colors import ListedColormap
+    nombres = ["Sagital", "Coronal", "Axial"]
+    aspectos = [tamano_voxel[1] / tamano_voxel[0], tamano_voxel[1] / tamano_voxel[2],
+                tamano_voxel[0] / tamano_voxel[2]]
+
+    fig, ejes = plt.subplots(1, 3, figsize=(14, 5))
+    fig.suptitle(f"{titulo} - Banda periventricular donde se mide la textura")
+    for eje, imagen, ventriculos, banda, nombre, aspecto in zip(
+            ejes, cortar(normalizada), cortar(mascara_ventricular.astype(float)),
+            cortar(mascara_banda.astype(float)), nombres, aspectos):
+        eje.imshow(imagen, cmap="gray", aspect=aspecto)
+        eje.imshow(np.ma.masked_where(banda < 0.5, banda), cmap=ListedColormap(["magenta"]), alpha=0.45,
+                   aspect=aspecto, vmin=0, vmax=1)
+        if np.any(ventriculos):
+            eje.contour(ventriculos, levels=[0.5], colors="yellow", linewidths=1.2)
+        eje.set_title(nombre)
+        eje.axis("off")
+
+    from matplotlib.lines import Line2D
+    from matplotlib.patches import Patch
+    fig.legend([Line2D([0], [0], color="yellow", lw=2), Patch(color="magenta", alpha=0.45)],
+               ["Ventrículos", "Banda periventricular"], loc="lower center", ncol=2)
+    fig.tight_layout(rect=[0, 0.06, 1, 1])
+    return fig
+
+
+# La GLCM como imagen: cada casilla (i, j) es la probabilidad de que un vóxel de la banda
+# tenga nivel de gris i y su vecino nivel j. Si la textura es homogénea, la probabilidad se
+# concentra cerca de la diagonal (vecinos parecidos); si es heterogénea, se desparrama.
+# Se muestra en escala logarítmica para que se vean también las casillas con pocos pares.
+def graficar_glcm(glcm, titulo="Matriz de co-ocurrencia (GLCM)"):
+    fig, eje = plt.subplots(figsize=(6, 5.5))
+    imagen = eje.imshow(np.log10(glcm + 1e-6), cmap="viridis", origin="lower")
+    eje.plot([0, glcm.shape[0] - 1], [0, glcm.shape[0] - 1], color="white", linestyle=":", linewidth=1)
+    eje.set(title=titulo, xlabel="Nivel de gris del vecino (j)", ylabel="Nivel de gris del vóxel (i)")
+    fig.colorbar(imagen, ax=eje, label="log10(probabilidad)")
+    fig.tight_layout()
+    return fig
+
+
+# Un gráfico por paciente: cambio de las características de textura desde MR1 (en %),
+# con el cambio del volumen ventricular como referencia.
+def graficar_evolucion_textura(tabla, carpeta_salida,
+                               caracteristicas=("contraste", "homogeneidad", "energia", "entropia")):
+    os.makedirs(carpeta_salida, exist_ok=True)
+    marcadores = ["o", "s", "^", "D", "v"]
+    rutas = []
+    for paciente, visitas in tabla.groupby("paciente", sort=False):
+        visitas = visitas.sort_values("anios_desde_primera")
+        fig, eje = plt.subplots(figsize=(9, 5))
+        for caracteristica, marcador in zip(caracteristicas, marcadores):
+            columna = f"cambio_{caracteristica}_pct"
+            if columna in visitas.columns:
+                eje.plot(visitas["anios_desde_primera"], visitas[columna], marker=marcador,
+                         label=caracteristica.capitalize())
+        if "volumen_ventricular_ml" in visitas.columns:
+            inicial = visitas["volumen_ventricular_ml"].iloc[0]
+            if np.isfinite(inicial) and inicial > 0:
+                eje.plot(visitas["anios_desde_primera"],
+                         100 * (visitas["volumen_ventricular_ml"] - inicial) / inicial,
+                         color="gray", linestyle="--", label="Volumen ventricular (referencia)")
+        eje.axhline(0, color="gray", linewidth=1, linestyle=":")
+        eje.set(xlabel="Años desde la primera visita", ylabel="Cambio respecto de MR1 (%)",
+                title=f"Textura periventricular - {paciente} ({visitas['grupo'].iloc[0]})")
+        eje.grid(alpha=0.3)
+        eje.legend()
+        fig.tight_layout()
+        ruta = os.path.join(carpeta_salida, f"textura_{paciente}.png")
+        fig.savefig(ruta, dpi=170, bbox_inches="tight")
+        plt.close(fig)
+        rutas.append(ruta)
+    return rutas
+
+
+# Tasa de cambio por año (% respecto de MR1) de algunas características, para todos los
+# pacientes en un mismo gráfico de barras, con el grupo de cada uno en el eje.
+def graficar_tasas_textura(resumen, ruta_salida, caracteristicas=("contraste", "homogeneidad", "entropia")):
+    columnas = [f"tasa_{c}_pct_anio" for c in caracteristicas if f"tasa_{c}_pct_anio" in resumen.columns]
+    fig, eje = plt.subplots(figsize=(10, 5))
+    posiciones = np.arange(len(resumen))
+    ancho = 0.8 / max(len(columnas), 1)
+    for k, columna in enumerate(columnas):
+        eje.bar(posiciones + (k - (len(columnas) - 1) / 2) * ancho, resumen[columna], width=ancho,
+                label=columna.replace("tasa_", "").replace("_pct_anio", "").capitalize())
+    eje.set_xticks(posiciones)
+    eje.set_xticklabels([f"{p}\n{g}" for p, g in zip(resumen["paciente"], resumen["grupo"])])
+    eje.axhline(0, color="gray", linewidth=1)
+    eje.set(ylabel="Tasa de cambio (% por año)", title="Tasa de cambio de la textura periventricular por paciente")
+    eje.grid(axis="y", alpha=0.3)
+    eje.legend()
+    fig.tight_layout()
+    os.makedirs(os.path.dirname(ruta_salida), exist_ok=True)
+    fig.savefig(ruta_salida, dpi=170, bbox_inches="tight")
+    plt.close(fig)
+    return ruta_salida

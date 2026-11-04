@@ -1,2 +1,2 @@
 paciente,grupo,cantidad_visitas,anios_seguimiento,volumen_inicial_ml,volumen_final_ml,cambio_total_ml,cambio_total_pct,tasa_promedio_ml_anio,nwbv_oasis_inicial,nwbv_oasis_final,cdr_inicial,cdr_final,mmse_inicial,mmse_final
-OAS2_0048,Demented,5,3.376,1224.1,1143.9,-80.19999999999982,-6.551752307817974,-23.755924170616062,0.7106,0.6761,1.0,1.0,19.0,4.0
+OAS2_0048,Demented,2,0.679,1224.6,1221.8,-2.7999999999999545,-0.22864608851869628,-4.1237113402061185,0.7106,0.7028,1.0,1.0,19.0,21.0

@@ -59,15 +59,18 @@ import pandas as pd
 import SimpleITK as sitk
 from Funciones.Lectura import cargar_datos_clinicos, buscar_carpeta_visita, listar_adquisiciones, leer_tamano_voxel, cargar_volumen_nifti
 from Funciones.Procesamiento import promediar_adquisiciones, filtro_mediana, corregir_bias_field, normalizar_intensidad
-from Funciones.Features import mascara_cerebro, mascara_cerebro_seguimiento, volumen_ml, segmentar_ventriculos, fraccion_ventricular
-from Funciones.Interpretacion import calcular_evolucion, resumir_pacientes, calcular_cambios_ventriculares, analizar_evolucion_clinica
+from Funciones.Features import (mascara_cerebro, mascara_cerebro_seguimiento, volumen_ml, segmentar_ventriculos, fraccion_ventricular,
+                                banda_periventricular, caracteristicas_textura, GROSOR_BANDA_MM)
+from Funciones.Interpretacion import (calcular_evolucion, resumir_pacientes, calcular_cambios_ventriculares, analizar_evolucion_clinica,
+                                      calcular_cambios_textura)
 from Funciones.Validacion import (concordancia_oasis, imprimir_concordancia_oasis, test_retest, imprimir_test_retest,
                                   validacion_mrbrains, imprimir_validacion_mrbrains)
 from Funciones.Visualizacion import (visualizar_planos_ortogonales, graficar_histogramas_visitas, visualizar_mascaras,
                                      graficar_histograma_umbral, visualizar_ventriculos, visualizar_comparacion_ventricular,
                                      guardar_graficos_evolucion, graficar_evolucion_ventricular, graficar_fraccion_ventricular,
                                      graficar_analisis_clinico, graficar_concordancia_oasis,
-                                     graficar_histograma_bias)
+                                     graficar_histograma_bias, visualizar_banda_textura, graficar_glcm,
+                                     graficar_evolucion_textura, graficar_tasas_textura)
 from Funciones import Reporte
 
 RUTA_DATASET = "Dataset"
@@ -263,6 +266,20 @@ def procesar_paciente(paciente_id, cantidad_visitas=CANTIDAD_VISITAS, guardar_pd
         )
         print(f"  Máscara 3D guardada en: {ruta_mascara_ventricular}")
 
+        # ---- Textura del tejido periventricular ----
+        # La banda sale de las máscaras (dónde medir); la textura, de la imagen normalizada.
+        mascara_banda = banda_periventricular(mascara_ventricular, mascara_tejido, tamano_voxel)
+        textura, glcm = caracteristicas_textura(normalizada, mascara_banda)
+        volumen_banda = volumen_ml(mascara_banda, tamano_voxel)
+        print()
+        print(f"Textura de la banda periventricular ({GROSOR_BANDA_MM:.0f} mm alrededor de los ventrículos):")
+        print(f"  Volumen de la banda: {volumen_banda:.1f} ml")
+        for nombre, valor in textura.items():
+            print(f"  {nombre.capitalize()}: {valor:.4f}")
+        if glcm is None:
+            print("  AVISO: la banda tiene muy pocos vóxeles (¿falló la segmentación ventricular?). "
+                  "La textura queda sin calcular.")
+
         # Para la figura comparativa se guardan MR1 y la última visita procesada.
         # 'transformada_visitas' viene de Features.py y lleva la visita actual a MR1.
         if primera_visita_ventricular is None:
@@ -324,6 +341,8 @@ def procesar_paciente(paciente_id, cantidad_visitas=CANTIDAD_VISITAS, guardar_pd
             "ruta_mascara_ventricular": ruta_mascara_ventricular,
             "umbral_tejido": round(float(umbral), 4),
             "correlacion_registro": round(corr, 4),
+            "volumen_banda_ml": round(volumen_banda, 1),
+            **{f"textura_{nombre}": round(valor, 4) for nombre, valor in textura.items()},
         })
 
         fig_cerebro = visualizar_mascaras(
@@ -339,6 +358,15 @@ def procesar_paciente(paciente_id, cantidad_visitas=CANTIDAD_VISITAS, guardar_pd
             normalizada, mascara_ventricular, mri_id, tamano_voxel
         )
         Reporte.agregar_figura(fig_ventriculos)
+
+        fig_banda = visualizar_banda_textura(
+            normalizada, mascara_ventricular, mascara_banda, mri_id, tamano_voxel
+        )
+        Reporte.agregar_figura(fig_banda)
+
+        # La GLCM se muestra solo en la primera visita procesada, para explicar qué se mide
+        if glcm is not None and falta_mostrar_original:
+            Reporte.agregar_figura(graficar_glcm(glcm, titulo=f"{mri_id} - GLCM de la banda periventricular"))
 
         fig_umbral = graficar_histograma_umbral(
             normalizada[mascara], umbral, centros,
@@ -471,6 +499,24 @@ def interpretar(datos, carpeta_resultados=RUTA_RESULTADOS, al_guardar_grafico=No
         ruta = graficar_fraccion_ventricular(datos, os.path.join(carpeta_graficos, "fraccion_ventricular_pacientes.png"))
         print(f"Gráfico de fracción ventricular guardado en: {ruta}")
         rutas_graficos.append(ruta)
+
+    # Textura del tejido periventricular entre visitas
+    if "textura_contraste" in datos.columns:
+        textura_visitas, textura_resumen = calcular_cambios_textura(datos)
+        ruta_textura = os.path.join(carpeta_resultados, "comparacion_textura.csv")
+        ruta_resumen_textura = os.path.join(carpeta_resultados, "resumen_textura.csv")
+        textura_visitas.to_csv(ruta_textura, index=False)
+        textura_resumen.to_csv(ruta_resumen_textura, index=False)
+        print("\n========== TEXTURA PERIVENTRICULAR: TASA DE CAMBIO (% por año) ==========")
+        print(textura_resumen.to_string(index=False))
+        print(f"Tablas guardadas en: {ruta_textura} y {ruta_resumen_textura}")
+        for ruta in graficar_evolucion_textura(textura_visitas, carpeta_graficos):
+            print(f"Gráfico de textura guardado en: {ruta}")
+            rutas_graficos.append(ruta)
+        if len(textura_resumen) > 0:
+            ruta = graficar_tasas_textura(textura_resumen, os.path.join(carpeta_graficos, "tasas_textura_pacientes.png"))
+            print(f"Gráfico de tasas de textura guardado en: {ruta}")
+            rutas_graficos.append(ruta)
 
     # Análisis morfológico-clínico: compara volúmenes, nWBV, CDR y MMSE.
     detalle_clinico, resumen_clinico = analizar_evolucion_clinica(datos)

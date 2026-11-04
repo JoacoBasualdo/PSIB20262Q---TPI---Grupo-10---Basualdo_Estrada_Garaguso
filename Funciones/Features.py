@@ -6,6 +6,7 @@
 #      rígido entre visitas (visitas siguientes) -> tejido cerebral y zona intracraneal.
 #   2. Ventrículos laterales: atlas Harvard-Oxford + umbral de LCR + conectividad 3D.
 #   3. Fracción ventricular: ventrículos relativizados a la zona intracraneal.
+#   4. Textura del tejido periventricular: matriz de co-ocurrencia de grises (GLCM).
 
 import os
 import numpy as np
@@ -13,6 +14,7 @@ import nibabel as nib
 import SimpleITK as sitk
 from scipy import ndimage
 from functools import lru_cache
+from skimage.feature import graycomatrix
 from Funciones.Procesamiento import numpy_a_sitk, rellenar_huecos_por_corte
 
 
@@ -899,3 +901,91 @@ def fraccion_ventricular(volumen_ventricular_ml, volumen_intracraneal_ml):
     if not np.isfinite(volumen_ventricular_ml) or volumen_intracraneal_ml <= 0:
         return np.nan
     return 100.0 * volumen_ventricular_ml / volumen_intracraneal_ml
+
+
+# =============================================================================
+# TEXTURA DEL TEJIDO PERIVENTRICULAR
+# =============================================================================
+# Mide si el tejido que rodea a los ventrículos se vuelve más heterogéneo con el tiempo.
+# La segmentación solo define DÓNDE medir (la banda); los valores salen de la imagen
+# normalizada (los brillos reales). Por eso la normalización es necesaria: sin ella la
+# textura cambiaría por la escala del equipo y no por el tejido.
+
+GROSOR_BANDA_MM = 4.0       # ancho de la banda alrededor de los ventrículos
+NIVELES_GRIS = 32           # niveles en los que se cuantiza la imagen normalizada [0, 1]
+MIN_VOXELES_CORTE = 30      # cortes con menos vóxeles de banda no se usan (poca información)
+CARACTERISTICAS_TEXTURA = ["contraste", "homogeneidad", "energia", "correlacion", "entropia",
+                           "media", "desvio"]
+
+
+# Banda de tejido alrededor de los ventrículos:
+#   dilatar los ventrículos 'grosor_mm' -> quitar los ventrículos -> quedarse con lo que es tejido.
+# La intersección con la máscara de tejido evita que entre LCR (surcos, ventrículos agrandados).
+def banda_periventricular(mascara_ventricular, mascara_tejido, tamano_voxel, grosor_mm=GROSOR_BANDA_MM):
+    if mascara_ventricular is None or not np.any(mascara_ventricular):
+        return np.zeros(mascara_tejido.shape, dtype=bool)
+    alrededor = dilatar(mascara_ventricular, grosor_mm, tamano_voxel)
+    return alrededor & ~mascara_ventricular & mascara_tejido
+
+
+# Pasa la imagen normalizada [0, 1] a enteros 0 ... niveles-1 (la GLCM necesita niveles discretos).
+def cuantizar(normalizada, niveles=NIVELES_GRIS):
+    return np.clip((normalizada * niveles).astype(np.int32), 0, niveles - 1)
+
+
+# GLCM de un corte, contando solo pares de vóxeles que están los dos dentro de la banda.
+# Truco: los vóxeles de afuera se marcan con un nivel extra ('niveles') y después esa
+# fila y columna se descartan. Se usan 4 direcciones (0°, 45°, 90°, 135°) a distancia 1
+# y la matriz es simétrica (el par a-b cuenta igual que b-a).
+def glcm_corte(corte_cuantizado, mascara_corte, niveles=NIVELES_GRIS):
+    imagen = np.where(mascara_corte, corte_cuantizado, niveles).astype(np.uint8)
+    glcm = graycomatrix(imagen, distances=[1], angles=[0, np.pi / 4, np.pi / 2, 3 * np.pi / 4],
+                        levels=niveles + 1, symmetric=True, normed=False)
+    return glcm[:niveles, :niveles, 0, :].sum(axis=2).astype(float)
+
+
+# Características de textura de la banda.
+# Se recorren los cortes axiales (eje 1 = superoinferior) y se suman las GLCM de todos los
+# cortes y direcciones en una sola matriz, que se normaliza para que sume 1 (probabilidades).
+# De esa matriz p(i, j) (probabilidad de que un vóxel tenga nivel i y su vecino nivel j):
+#   contraste    = suma p * (i - j)^2           -> cuánto difieren los vecinos
+#   homogeneidad = suma p / (1 + (i - j)^2)     -> cuánto se parecen los vecinos
+#   energía      = raíz(suma p^2)               -> qué tan repetitivo es el patrón
+#   correlación  = suma p (i - mi)(j - mj) / (si sj) -> qué tan predecible es el vecino
+#   entropía     = -suma p log2 p               -> cuán desordenada es la textura
+# Además: media y desvío del brillo de la banda (primer orden).
+# Devuelve el diccionario de características y la GLCM normalizada (para graficarla).
+def caracteristicas_textura(normalizada, mascara_banda, niveles=NIVELES_GRIS):
+    resultado = {nombre: np.nan for nombre in CARACTERISTICAS_TEXTURA}
+    if mascara_banda is None or mascara_banda.sum() < MIN_VOXELES_CORTE:
+        return resultado, None
+
+    cuantizada = cuantizar(normalizada, niveles)
+    glcm = np.zeros((niveles, niveles))
+    for indice in range(normalizada.shape[1]):
+        mascara_corte = mascara_banda[:, indice, :]
+        if mascara_corte.sum() < MIN_VOXELES_CORTE:
+            continue
+        glcm += glcm_corte(cuantizada[:, indice, :], mascara_corte, niveles)
+
+    if glcm.sum() == 0:
+        return resultado, None
+
+    p = glcm / glcm.sum()
+    i, j = np.indices(p.shape)
+    media_i, media_j = (i * p).sum(), (j * p).sum()
+    desvio_i = np.sqrt(((i - media_i) ** 2 * p).sum())
+    desvio_j = np.sqrt(((j - media_j) ** 2 * p).sum())
+    no_cero = p[p > 0]
+
+    resultado["contraste"] = float((p * (i - j) ** 2).sum())
+    resultado["homogeneidad"] = float((p / (1 + (i - j) ** 2)).sum())
+    resultado["energia"] = float(np.sqrt((p ** 2).sum()))
+    resultado["correlacion"] = float(((i - media_i) * (j - media_j) * p).sum() / (desvio_i * desvio_j)) \
+        if desvio_i > 0 and desvio_j > 0 else np.nan
+    resultado["entropia"] = float(-(no_cero * np.log2(no_cero)).sum())
+
+    valores = normalizada[mascara_banda]
+    resultado["media"] = float(valores.mean())
+    resultado["desvio"] = float(valores.std())
+    return resultado, p

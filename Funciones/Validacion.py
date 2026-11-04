@@ -33,7 +33,8 @@ from Funciones.Lectura import (cargar_datos_clinicos, buscar_carpeta_visita, lis
                                leer_tamano_voxel, cargar_volumen_nifti, buscar_archivos_mrbrains,
                                cargar_t1_como_oasis)
 from Funciones.Procesamiento import corregir_bias_field, normalizar_intensidad
-from Funciones.Features import mascara_cerebro, mascara_cerebro_seguimiento, segmentar_ventriculos, volumen_ml
+from Funciones.Features import (mascara_cerebro, mascara_cerebro_seguimiento, segmentar_ventriculos, volumen_ml,
+                                banda_periventricular, caracteristicas_textura)
 from Funciones.Visualizacion import graficar_validacion_mrbrains
 
 ETIQUETA_VENTRICULOS_MRBRAINS = 6
@@ -141,14 +142,24 @@ def medir_test_retest_visita(carpeta_raw, mri_id):
         transformada_atlas=transformada_atlas_2
     )
 
+    # Textura de la banda periventricular en cada adquisición
+    textura_1, _ = caracteristicas_textura(normalizada_1, banda_periventricular(ventriculos_1, tejido_1, tamano_voxel))
+    textura_2, _ = caracteristicas_textura(normalizada_2, banda_periventricular(ventriculos_2, tejido_2, tamano_voxel))
+
     return {
         "mri_id": mri_id,
+        **{f"{nombre}_mpr1": round(textura_1[nombre], 4) for nombre in CARACTERISTICAS_TEST_RETEST},
+        **{f"{nombre}_mpr2": round(textura_2[nombre], 4) for nombre in CARACTERISTICAS_TEST_RETEST},
         "tejido_mpr1_ml": round(volumen_ml(tejido_1, tamano_voxel), 1),
         "tejido_mpr2_ml": round(volumen_ml(tejido_2, tamano_voxel), 1),
         "ventriculos_mpr1_ml": round(info_1["volumen_ml"], 2),
         "ventriculos_mpr2_ml": round(info_2["volumen_ml"], 2),
         "correlacion_registro": round(corr, 4),
     }
+
+
+# Características de textura que se comparan en el test-retest
+CARACTERISTICAS_TEST_RETEST = ["contraste", "homogeneidad", "entropia"]
 
 
 # Corre el test-retest sobre las primeras visitas de cada paciente.
@@ -182,6 +193,10 @@ def test_retest(pacientes, ruta_dataset, ruta_datos_clinicos, visitas_por_pacien
     columnas = ["paciente", "mri_id", "tejido_mpr1_ml", "tejido_mpr2_ml", "dif_tejido_ml", "dif_tejido_pct",
                 "ventriculos_mpr1_ml", "ventriculos_mpr2_ml", "dif_ventriculos_ml", "dif_ventriculos_pct",
                 "correlacion_registro"]
+    for nombre in CARACTERISTICAS_TEST_RETEST:
+        tabla[f"dif_{nombre}_pct"] = (100 * (tabla[f"{nombre}_mpr2"] - tabla[f"{nombre}_mpr1"])
+                                      / tabla[f"{nombre}_mpr1"]).round(2)
+        columnas += [f"{nombre}_mpr1", f"{nombre}_mpr2", f"dif_{nombre}_pct"]
     tabla = tabla[columnas]
     if ruta_csv:
         tabla.to_csv(ruta_csv, index=False)
@@ -215,6 +230,27 @@ def imprimir_test_retest(tabla, datos_visitas):
         print(f"  {paciente} ({anios.max():.1f} años): "
               f"tejido {cambio_tejido:+.1f} ml = {abs(cambio_tejido) / error_tejido:.1f} veces el error | "
               f"ventrículos {cambio_ventriculos:+.1f} ml = {abs(cambio_ventriculos) / error_ventriculos:.1f} veces el error")
+
+    # Textura: error típico en % y comparación con el cambio de cada paciente (también en %)
+    print("\nTextura periventricular: error típico (mediana de |diferencia| entre mpr-1 y mpr-2):")
+    errores_textura = {}
+    for nombre in CARACTERISTICAS_TEST_RETEST:
+        errores_textura[nombre] = tabla[f"dif_{nombre}_pct"].abs().median()
+        print(f"  {nombre.capitalize()}: {errores_textura[nombre]:.2f}%")
+    print("Cambio acumulado de textura en todo el seguimiento comparado con el error:")
+    for paciente, filas in datos_visitas.groupby("paciente", sort=False):
+        if len(filas) < 2 or f"textura_{CARACTERISTICAS_TEST_RETEST[0]}" not in filas.columns:
+            continue
+        anios = filas["anios_desde_primera"].values
+        partes = []
+        for nombre in CARACTERISTICAS_TEST_RETEST:
+            valores = filas[f"textura_{nombre}"].values
+            if not np.all(np.isfinite(valores)) or valores[0] == 0 or not errores_textura[nombre] > 0:
+                continue
+            cambio_pct = 100 * pendiente(anios, valores) * anios.max() / valores[0]
+            partes.append(f"{nombre} {cambio_pct:+.1f}% = {abs(cambio_pct) / errores_textura[nombre]:.1f} veces el error")
+        if partes:
+            print(f"  {paciente} ({anios.max():.1f} años): " + " | ".join(partes))
 
 
 # =============================================================================
