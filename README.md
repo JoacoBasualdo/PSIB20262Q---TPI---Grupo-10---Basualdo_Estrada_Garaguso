@@ -25,7 +25,8 @@ El proyecto cuantifica la atrofia cerebral asociada a la enfermedad de Alzheimer
 
 - el **volumen de tejido cerebral** (sustancia gris + blanca);
 - el **volumen de los ventrículos laterales** (izquierdo y derecho);
-- la **fracción ventricular**: el volumen ventricular dividido por el volumen de la zona intracraneal, en %.
+- la **fracción ventricular**: el volumen ventricular dividido por el volumen de la zona intracraneal, en %;
+- la **textura del tejido periventricular**: características de la matriz de co-ocurrencia de grises (GLCM) calculadas en una banda de 4 mm de tejido alrededor de los ventrículos, para evaluar si el tejido se vuelve más heterogéneo.
 
 Después se analiza cómo cambian esas medidas entre visitas y se relacionan con la evolución clínica (CDR y MMSE). El método se valida de tres formas: contra los valores publicados por OASIS, repitiendo la medición sobre dos adquisiciones de la misma sesión (test-retest) y contra segmentaciones manuales de MRBrainS18.
 
@@ -44,7 +45,7 @@ Después se analiza cómo cambian esas medidas entre visitas y se relacionan con
 ## Requisitos
 
 - **Python 3.10 o superior.**
-- Las bibliotecas de `requirements.txt`: `nibabel`, `numpy`, `matplotlib`, `SimpleITK`, `pandas`, `openpyxl`, `scipy`, `nilearn` y `PySide6` (esta última solo para la interfaz gráfica).
+- Las bibliotecas de `requirements.txt`: `nibabel`, `numpy`, `matplotlib`, `SimpleITK`, `pandas`, `openpyxl`, `scipy`, `nilearn`, `scikit-image` y `PySide6` (esta última solo para la interfaz gráfica).
 - **Espacio en disco:** ~19 GB para descargar los dos `.tar.gz` de OASIS-2. Una vez extraídos los 4 pacientes, los `.tar.gz` se pueden borrar: los datos que usa el código ocupan mucho menos.
 - **Internet:** para descargar los datos y, la primera vez que se corre `main.py`, el atlas Harvard-Oxford.
 - **[aria2](https://aria2.github.io/)** (recomendado): descarga los archivos grandes en paralelo y retoma la descarga si se corta.
@@ -177,7 +178,7 @@ Se puede correr desde cualquier carpeta: el programa se ubica solo en la raíz d
 2. **Visitas a procesar**: cuántas visitas del paciente se procesan, empezando por la primera.
 3. **Validación**: casillas para la concordancia con OASIS (necesita al menos 2 visitas), el test-retest y MRBrainS18 (se deshabilita si no está descargado). En **opciones avanzadas** se elige cuántas visitas usar en el test-retest.
 4. **Ejecutar**: el procesamiento corre en segundo plano y una barra muestra el avance por visita y por etapa.
-5. **Resultados**: aparecen en pestañas, una por etapa (Lectura, Procesamiento, Features, Interpretación y Validación), con los textos y las figuras de cada visita. La pestaña **Consola** muestra todo lo que se imprimió.
+5. **Resultados**: aparecen en pestañas, una por etapa (Lectura, Procesamiento, Features, Interpretación y Validación), con los textos y las figuras de cada visita. La pestaña **Consola** muestra todo lo que se imprimió. En la pestaña **Features** se ven, para cada visita, la banda periventricular donde se mide la textura y, en la primera visita, la matriz de co-ocurrencia (GLCM). Cada pestaña tiene controles de zoom para las figuras (**−**, **+** y **Ajustar al ancho**, o Ctrl + rueda del mouse).
 6. **Guardar PDF** genera el reporte con todo lo que se muestra en las pestañas, y **Abrir carpeta de resultados** abre `Resultados/Interfaz/<paciente>/`.
 
 Procesar un paciente con 5 visitas tarda unos 8-10 minutos (más si se activan el test-retest o MRBrainS18).
@@ -190,7 +191,7 @@ Al principio de `main.py` se elige qué partes correr:
 |---|---|---|
 | `PROCESAR_IMAGENES` | Procesa las resonancias de los 4 pacientes. Con `False` usa el `Resultados/volumenes.csv` ya generado y solo rehace la interpretación y la validación | ~30-40 min |
 | `VALIDAR_CONCORDANCIA_OASIS` | Compara nuestra tasa de atrofia con la del nWBV publicado por OASIS | segundos |
-| `VALIDAR_TEST_RETEST` | Mide el error del método comparando dos adquisiciones de la misma sesión (`VISITAS_TEST_RETEST` visitas por paciente) | ~2-3 min por visita |
+| `VALIDAR_TEST_RETEST` | Mide el error del método (volúmenes y textura) comparando dos adquisiciones de la misma sesión (`VISITAS_TEST_RETEST` visitas por paciente) | ~2-3 min por visita |
 | `VALIDAR_MRBRAINS` | Compara nuestros ventrículos con la segmentación manual de MRBrainS18 (se saltea si no está `Dataset/MRBrainS18/`) | ~1-2 min por sujeto |
 | `VISITAS_TEST_RETEST` | Cantidad de visitas por paciente que se usan en el test-retest | — |
 | `PACIENTES` | Lista de pacientes a procesar | — |
@@ -213,13 +214,14 @@ Para cada paciente y cada visita (`procesar_paciente` en `main.py`):
    - **Primera visita**: se registra la plantilla MNI152 sobre el paciente (registro afín, con búsqueda de la inclinación inicial) para obtener la **zona intracraneal**. Adentro de esa zona, el tejido se separa del líquido con un umbral calculado por k-medias de 4 clases.
    - **Visitas siguientes**: se alinean con la primera visita (registro rígido) y se usa **la misma zona intracraneal**, así todas las visitas se miden sobre la misma región.
 7. **Ventrículos laterales**: las etiquetas del atlas Harvard-Oxford se llevan al paciente con las mismas transformaciones. Alrededor de cada etiqueta (8 mm) se buscan los vóxeles oscuros (líquido) y se conservan las regiones conectadas a la etiqueta. Cada visita recibe un **estado de control** (`REVISAR_MASCARA`, `REVISAR_VOLUMEN` o `REVISAR_REGISTRO_O_SEGMENTACION`).
-8. **Medidas**: volumen de tejido, volumen intracraneal, nWBV propio, ventrículos (total, izquierdo y derecho) y fracción ventricular.
-9. **Salidas**: PDF del paciente con las figuras de cada etapa, máscara ventricular en NIfTI y comparación anatómica de la primera y la última visita.
+8. **Textura periventricular**: se arma una banda de 4 mm de tejido alrededor de los ventrículos (dilatación de la máscara ventricular, sin los ventrículos y solo donde hay tejido). Sobre la imagen normalizada, cuantizada a 32 niveles de gris, se calcula la matriz de co-ocurrencia (GLCM) en cada corte axial, a distancia 1 y en 4 direcciones, y se suman todas en una sola matriz. De ella se obtienen contraste, homogeneidad, energía, correlación y entropía, además de la media y el desvío del brillo de la banda.
+9. **Medidas**: volumen de tejido, volumen intracraneal, nWBV propio, ventrículos (total, izquierdo y derecho), fracción ventricular y características de textura.
+10. **Salidas**: PDF del paciente con las figuras de cada etapa, máscara ventricular en NIfTI y comparación anatómica de la primera y la última visita.
 
 Después de procesar a todos los pacientes:
 
-- **Interpretación** (`interpretar`): cambios desde la primera visita y entre visitas, tasas por año y relación con CDR y MMSE.
-- **Validación** (`validar`): concordancia con OASIS, test-retest y MRBrainS18.
+- **Interpretación** (`interpretar`): cambios desde la primera visita y entre visitas, tasas por año, evolución de la textura periventricular y relación con CDR y MMSE.
+- **Validación** (`validar`): concordancia con OASIS, test-retest (volúmenes y textura) y MRBrainS18.
 
 ---
 
@@ -240,7 +242,7 @@ Después de procesar a todos los pacientes:
 | `App.py` | Ventana principal: encabezado, panel de parámetros, barra de progreso, pestañas de resultados y botones para guardar el PDF y abrir la carpeta. Se ejecuta con `python Interfaz/App.py` |
 | `Panel_parametros.py` | Panel izquierdo: paciente, visitas, validaciones y opciones avanzadas. Controla que los parámetros sean válidos antes de ejecutar |
 | `Trabajador.py` | Corre `ejecutar_pipeline` de `main.py` en otro hilo, para que la ventana no se congele, y le manda a la ventana el texto, el avance y los resultados |
-| `Vista_resultados.py` | Arma cada pestaña de resultados con sus subtítulos, textos e imágenes |
+| `Vista_resultados.py` | Arma cada pestaña de resultados con sus subtítulos, textos e imágenes, y los controles de zoom de las figuras |
 | `Estilo.py` | Colores, tipografías y nombre de la aplicación |
 | `recursos/` | Logo del ITBA e íconos |
 
@@ -248,8 +250,8 @@ Después de procesar a todos los pacientes:
 |---|---|
 | `Lectura.py` | Carga de las resonancias, tamaño de vóxel, carpetas de cada visita, Excel clínico y datos de MRBrainS18 |
 | `Procesamiento.py` | Promediado de las adquisiciones, máscara de la cabeza, corrección de *bias field* (N4) y normalización de intensidad |
-| `Features.py` | Extracción del cerebro (plantilla MNI152 y registro entre visitas), ventrículos laterales (atlas Harvard-Oxford) y fracción ventricular |
-| `Interpretacion.py` | Evolución del cerebro y los ventrículos entre visitas, y relación con CDR y MMSE |
+| `Features.py` | Extracción del cerebro (plantilla MNI152 y registro entre visitas), ventrículos laterales (atlas Harvard-Oxford), fracción ventricular y textura periventricular (GLCM) |
+| `Interpretacion.py` | Evolución del cerebro, los ventrículos y la textura entre visitas, y relación con CDR y MMSE |
 | `Validacion.py` | Concordancia con OASIS, test-retest y comparación con MRBrainS18 |
 | `Visualizacion.py` | Todas las figuras |
 | `Reporte.py` | PDF por paciente y máscaras ventriculares en NIfTI |
@@ -263,7 +265,7 @@ Después de procesar a todos los pacientes:
 |---|---|
 | `procesar_paciente(paciente_id, cantidad_visitas, guardar_pdf)` | Procesa las visitas de un paciente, genera su PDF (si `guardar_pdf`) y devuelve una fila por visita |
 | `procesar_todos()` | Procesa los pacientes de `PACIENTES` y guarda `volumenes.csv` después de cada uno |
-| `interpretar(datos, carpeta_resultados, ...)` | Evolución del cerebro, de los ventrículos y relación con la clínica (CSV y gráficos) |
+| `interpretar(datos, carpeta_resultados, ...)` | Evolución del cerebro, de los ventrículos, de la textura y relación con la clínica (CSV y gráficos) |
 | `validar(datos, carpeta_resultados, ...)` | Corre las validaciones elegidas (por defecto, las activadas en las opciones) |
 | `ejecutar_pipeline(paciente_id, ...)` | Procesa, interpreta y valida UN paciente y guarda en `Resultados/Interfaz/<paciente>/`. Es lo que corre la interfaz |
 | `main()` | Punto de entrada: procesa (o lee el CSV), interpreta y valida |
@@ -313,6 +315,10 @@ Después de procesar a todos los pacientes:
 | `mascara_cerebro_seguimiento(...)` | Extracción del cerebro en las visitas siguientes, con la zona de la primera |
 | `segmentar_ventriculos(...)` | Ventrículos laterales con el atlas Harvard-Oxford y umbral de líquido |
 | `fraccion_ventricular(vent_ml, intracraneal_ml)` | 100 · ventrículos / zona intracraneal |
+| `banda_periventricular(mascara_ventricular, mascara_tejido, tamano_voxel, grosor_mm)` | Banda de tejido de 4 mm alrededor de los ventrículos, donde se mide la textura |
+| `cuantizar(normalizada, niveles)` | Pasa la imagen normalizada [0, 1] a 32 niveles de gris enteros |
+| `glcm_corte(corte_cuantizado, mascara_corte)` | Matriz de co-ocurrencia de un corte, contando solo pares de vóxeles dentro de la banda |
+| `caracteristicas_textura(normalizada, mascara_banda)` | Suma las GLCM de todos los cortes y calcula contraste, homogeneidad, energía, correlación, entropía, media y desvío |
 
 #### `Interpretacion.py`
 | Función | Qué hace |
@@ -321,12 +327,13 @@ Después de procesar a todos los pacientes:
 | `resumir_pacientes(evolucion)` | Resumen por paciente: cambio total y tasa por año |
 | `calcular_cambios_ventriculares(datos)` | Cambio de los ventrículos (ml, % y fracción ventricular) |
 | `analizar_evolucion_clinica(datos)` | Cambios morfológicos junto con CDR y MMSE; devuelve el detalle por visita y el resumen |
+| `calcular_cambios_textura(datos)` | Cambio de cada característica de textura desde la primera visita (%) y tasa por año de cada paciente |
 
 #### `Validacion.py`
 | Función | Qué hace |
 |---|---|
 | `concordancia_oasis(datos)` | Compara la pendiente de nuestro nWBV con la del de OASIS |
-| `test_retest(...)` | Mide cerebro y ventrículos en `mpr-1` y `mpr-2` de una misma visita |
+| `test_retest(...)` | Mide cerebro, ventrículos y textura (contraste, homogeneidad y entropía) en `mpr-1` y `mpr-2` de una misma visita |
 | `validacion_mrbrains(...)` | Dice y diferencia de volumen contra la segmentación manual de MRBrainS18 |
 | `pendiente`, `dice`, `a_grilla_manual`, ... | Funciones auxiliares |
 | `imprimir_*` | Muestran cada validación en la terminal |
@@ -336,13 +343,18 @@ Después de procesar a todos los pacientes:
 |---|---|
 | `visualizar_planos_ortogonales` | Cortes sagital, coronal y axial |
 | `graficar_histogramas_visitas` | Histogramas de intensidad por visita |
+| `graficar_histograma_bias` | Histograma de la cabeza antes y después de la corrección N4 |
 | `visualizar_mascaras` | Contornos de las máscaras sobre la imagen |
 | `graficar_histograma_umbral` | Histograma con el umbral de k-medias |
 | `visualizar_ventriculos` | Contorno de los ventrículos en tres planos |
 | `visualizar_comparacion_ventricular` | Primera y última visita sobre los mismos cortes |
+| `visualizar_banda_textura` | Banda periventricular (magenta) y ventrículos (amarillo) en tres planos |
+| `graficar_glcm` | Matriz de co-ocurrencia como imagen |
 | `guardar_graficos_evolucion` | Evolución del volumen cerebral y del nWBV |
 | `graficar_evolucion_ventricular` | Evolución del tejido y de los ventrículos |
 | `graficar_fraccion_ventricular` | Fracción ventricular de todos los pacientes |
+| `graficar_evolucion_textura` | Cambio de las características de textura desde la primera visita, por paciente |
+| `graficar_tasas_textura` | Tasa de cambio por año de la textura, para todos los pacientes |
 | `graficar_analisis_clinico` | Morfología junto con CDR y MMSE |
 | `graficar_concordancia_oasis` | nWBV propio contra el de OASIS |
 | `graficar_validacion_mrbrains` | Contorno manual (verde) contra el nuestro (rojo) |
@@ -379,14 +391,16 @@ Todo queda en `Resultados/`:
 | Archivo | Contenido |
 |---|---|
 | `OAS2_XXXX_visitas.pdf` | Reporte de cada paciente: salida de la terminal y figuras de cada etapa |
-| `volumenes.csv` | Una fila por visita: datos clínicos, volumen de tejido, zona intracraneal, nWBV propio, ventrículos (ml), fracción ventricular y estado de control |
+| `volumenes.csv` | Una fila por visita: datos clínicos, volumen de tejido, zona intracraneal, nWBV propio, ventrículos (ml), fracción ventricular, estado de control, volumen de la banda periventricular y características de textura (`textura_...`) |
 | `comparacion_volumenes.csv`, `resumen_longitudinal.csv` | Evolución del volumen cerebral |
 | `comparacion_ventriculos.csv` | Evolución de los ventrículos (ml, % y fracción ventricular) |
+| `comparacion_textura.csv` | Cambio de cada característica de textura desde la primera visita, por visita |
+| `resumen_textura.csv` | Tasa de cambio por año de cada característica de textura, por paciente |
 | `analisis_clinico_integrado.csv`, `resumen_clinico_integrado.csv` | Cambios morfológicos junto con CDR y MMSE |
 | `concordancia_oasis.csv` | Pendiente de nuestro nWBV contra la del de OASIS |
-| `test_retest.csv` | Diferencia entre `mpr-1` y `mpr-2` de una misma visita |
+| `test_retest.csv` | Diferencia entre `mpr-1` y `mpr-2` de una misma visita (volúmenes y textura) |
 | `validacion_mrbrains.csv` | Dice y error de volumen contra MRBrainS18 |
-| `Graficos/` | Evolución por paciente, fracción ventricular, análisis clínico y concordancia con OASIS |
+| `Graficos/` | Evolución por paciente, fracción ventricular, textura periventricular (evolución y tasas), análisis clínico y concordancia con OASIS |
 | `Graficos/ComparacionAnatomica/` | Primera y última visita de cada paciente sobre los mismos cortes |
 | `Graficos/ValidacionMRBrainS/` | Contorno manual contra el nuestro para cada sujeto de MRBrainS18 |
 | `MascarasVentriculares/OAS2_XXXX/` | Máscara 3D de los ventrículos de cada visita (`.nii.gz`); se puede abrir en ITK-SNAP, 3D Slicer o FSLeyes junto con `mpr-1` |
@@ -396,11 +410,14 @@ Todo queda en `Resultados/`:
 
 **Zona intracraneal:** es la máscara de cerebro de la plantilla MNI152 llevada al paciente. No es el volumen intracraneal real (mide entre 1,02 y 1,19 veces el eTIV de OASIS), pero sirve como referencia fija para relativizar.
 
+**Textura periventricular:** se mide sobre la imagen normalizada, dentro de una banda de 4 mm de tejido alrededor de los ventrículos. Si el tejido se vuelve más heterogéneo, el contraste y la entropía suben, y la homogeneidad y la energía bajan. Como la banda depende de la segmentación ventricular, si esta falla en una visita la textura queda sin calcular (NaN).
+
 ### Resumen de la validación
 
 | Validación | Resultado |
 |---|---|
 | Test-retest (error del método) | Tejido: 6,9 ml (0,55%). Ventrículos: 0,22 ml (0,48%) |
+| Test-retest (textura) | Error típico de contraste, homogeneidad y entropía: completar con los resultados |
 | MRBrainS18 (7 sujetos) | Dice medio 0,84 (0,74-0,91); correlación de volumen r = 0,98; el método mide en promedio un 19,5% menos que la segmentación manual (diferencia sistemática, no afecta la comparación entre visitas) |
 | Concordancia con OASIS | Cociente entre nuestra pendiente de nWBV y la de OASIS entre 1,02 y 1,56 (mismo sentido en los 4 pacientes) |
 
@@ -419,8 +436,11 @@ Todo queda en `Resultados/`:
 | `MRBrainS18: no se encontraron sujetos` | Es solo un aviso: falta `Dataset/MRBrainS18/` (paso 3). El resto se ejecuta igual |
 | `PROCESAR_IMAGENES = False pero no existe Resultados/volumenes.csv` | Correr una vez con `PROCESAR_IMAGENES = True` |
 | `ModuleNotFoundError: No module named 'PySide6'` | Instalar las dependencias de nuevo: `pip install -r requirements.txt` |
+| `ModuleNotFoundError: No module named 'skimage'` | Falta scikit-image: `pip install -r requirements.txt` |
 | La interfaz dice que no se encontraron pacientes | Falta extraer el dataset: correr `python descargar_dataset.py` (paso 2) |
 | Al guardar el PDF desde la interfaz dice que no se pudo escribir | El PDF está abierto en otro programa: cerrarlo y volver a guardar |
+| La textura de una visita sale NaN | La segmentación ventricular de esa visita falló y la banda quedó vacía; revisar la figura de los ventrículos de esa visita |
+| Las columnas de textura no aparecen en `volumenes.csv` | El CSV es anterior a la textura: correr una vez con `PROCESAR_IMAGENES = True` |
 | Los volúmenes cambian levemente entre corridas | Es el registro multihilo de SimpleITK (~1%); ver [Ejecución](#ejecución) |
 
 ---
@@ -430,7 +450,6 @@ Todo queda en `Resultados/`:
 - **OASIS-2:** Marcus, D. S., Fotenos, A. F., Csernansky, J. G., Morris, J. C., & Buckner, R. L. (2010). Open Access Series of Imaging Studies: Longitudinal MRI Data in Nondemented and Demented Older Adults. *Journal of Cognitive Neuroscience*, 22(12), 2677-2684. https://doi.org/10.1162/jocn.2009.21407
 - **Plantilla MNI152 2009a:** Fonov, V., Evans, A. C., Botteron, K., Almli, C. R., McKinstry, R. C., Collins, D. L., & the Brain Development Cooperative Group (2011). Unbiased average age-appropriate atlases for pediatric studies. *NeuroImage*, 54(1), 313-327.
 - **Corrección N4:** Tustison, N. J., Avants, B. B., Cook, P. A., Zheng, Y., Egan, A., Yushkevich, P. A., & Gee, J. C. (2010). N4ITK: Improved N3 bias correction. *IEEE Transactions on Medical Imaging*, 29(6), 1310-1320.
+- **Textura (GLCM):** Haralick, R. M., Shanmugam, K., & Dinstein, I. (1973). Textural features for image classification. *IEEE Transactions on Systems, Man, and Cybernetics*, SMC-3(6), 610-621.
 - **Atlas Harvard-Oxford:** distribuido con FSL (https://fsl.fmrib.ox.ac.uk/fsl/fslwiki/Atlases), descargado mediante nilearn.
 - **MRBrainS18:** Kuijf, H. J., et al. (2024). MR Brain Segmentation Challenge 2018 Data. DataverseNL. https://doi.org/10.34894/E0U32Q
-
-Al usar los datos de OASIS se debe incluir el agradecimiento: *"Data were provided [in part] by OASIS"* y la cita de Marcus et al. (2010).
