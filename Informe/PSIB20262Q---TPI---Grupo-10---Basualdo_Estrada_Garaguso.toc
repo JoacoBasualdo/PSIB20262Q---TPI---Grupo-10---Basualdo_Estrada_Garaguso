@@ -21,7 +21,7 @@
 \contentsline {subsection}{\numberline {3.2}Evolución por paciente}{8}{subsection.3.2}%
 \contentsline {section}{\numberline {4}Conclusiones}{9}{section.4}%
 \contentsline {subsection}{\numberline {4.1}Discusión}{9}{subsection.4.1}%
-\contentsline {subsection}{\numberline {4.2}Limitaciones}{10}{subsection.4.2}%
+\contentsline {subsection}{\numberline {4.2}Limitaciones}{9}{subsection.4.2}%
 \contentsline {section}{\numberline {A}Análisis de textura periventricular}{11}{appendix.A}%
 \contentsline {section}{\numberline {B}Segmentación y extracción de cerebro}{13}{appendix.B}%
 \contentsline {section}{\numberline {C}Validación}{14}{appendix.C}%

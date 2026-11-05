@@ -249,10 +249,9 @@ Como salidas del procesamiento se generó un reporte en PDF por paciente, con la
  
 El método se evaluó de tres formas:
 \begin{itemize}
-    \item \textbf{Concordancia con OASIS}: se comparó la tasa de atrofia obtenida (variación anual del nWBV propio) con la del nWBV publicado por OASIS (Marcus et al., 2010), calculado por los autores con su propio método automático.
-    \item \textbf{Test-retest (precisión)}: en cada visita, OASIS adquirió entre tres y cuatro resonancias consecutivas. Como en esos minutos el cerebro no cambia, la diferencia entre medir por separado la primera y la segunda adquisición corresponde al error del método. Se evaluaron las dos primeras visitas de cada paciente.
+    \item \textbf{Concordancia con OASIS}: se comparó la tasa de atrofia obtenida (variación anual del nWBV propio) con la del nWBV publicado por OASIS (Marcus et al., 2010), calculado por los autores con su propio método automático. 
+    \item \textbf{Test-retest (precisión)}: se compararon las dos primeras adquisiciones (\texttt{mpr-1} y \texttt{mpr-2}) de una misma sesión, dado que no se esperan cambios anatómicos reales entre ellas. El procedimiento se aplicó a las dos primeras visitas de cada paciente para estimar la variabilidad de las mediciones de volumen cerebral, volumen ventricular y textura periventricular (contraste, homogeneidad y entropía).
     \item \textbf{Segmentación manual externa (exactitud de los ventrículos)}: como OASIS no publica volúmenes ventriculares, se utilizó el conjunto de entrenamiento de MRBrainS18 (Kuijf et al., 2024; 7 sujetos mayores de 50 años con distintos grados de atrofia), en el que expertos segmentaron manualmente los ventrículos. La superposición se cuantificó con el coeficiente Dice, $D = 2|A \cap B| / (|A| + |B|)$, que vale 1 si ambas máscaras coinciden y 0 si no se superponen. La referencia manual incluye todos los ventrículos (laterales con sus astas temporales, tercero y cuarto), mientras que el método mide solo los ventrículos laterales.
-    \item \textbf{Test-retest (precisión)}: se compararon las dos primeras adquisiciones de una misma sesión, cuya anatomía permanece prácticamente constante, para estimar la variabilidad del método. Se evaluaron el volumen cerebral, el ventricular y tres características de textura (contraste, homogeneidad y entropía) en las dos primeras visitas de cada paciente.
 \end{itemize}
 
 \subsection{Implementación}
@@ -263,7 +262,9 @@ El procesamiento se implementó en Python, utilizando NumPy y SciPy para el cál
 
 \subsection{Validación del método}
 
-La Tabla~\ref{tab:validacion} resume las tres validaciones realizadas. Las tasas de atrofia obtenidas fueron similares a las de OASIS en el paciente sano y el convertido (1,18 y 1,02 veces las publicadas, respectivamente), mientras que en los pacientes con demencia fueron mayores (1,27 y 1,56 veces). En el test-retest, el error típico fue de 6,9~ml (0,55\%) para el tejido cerebral y de 0,22~ml (0,48\%) para los ventrículos. Se identificó un caso atípico en OAS2\_0127, con una diferencia de 83~ml de tejido entre adquisiciones. Finalmente, la comparación con MRBrainS18 obtuvo un coeficiente Dice medio de 0,84 y una correlación de volúmenes de $r=0{,}98$.
+La Tabla~\ref{tab:validacion} resume las tres validaciones realizadas. Las tasas de atrofia obtenidas fueron similares a las de OASIS en el paciente sano y el convertido (1,18 y 1,02 veces las publicadas, respectivamente), mientras que en los pacientes con demencia fueron mayores (1,27 y 1,56 veces). 
+En el ensayo test-retest, la variabilidad típica, calculada como la mediana de las diferencias absolutas entre adquisiciones, fue de 6,9~ml (0,55\%) para el tejido cerebral y de 0,22~ml (0,48\%) para los ventrículos.
+Se identificó un caso atípico en OAS2\_0127, con una diferencia de 83~ml de tejido entre adquisiciones. Finalmente, la comparación con MRBrainS18 obtuvo un coeficiente Dice medio de 0,84 y una correlación de volúmenes de $r=0{,}98$.
 
 \begin{table}[H]
 \centering
@@ -273,7 +274,7 @@ La Tabla~\ref{tab:validacion} resume las tres validaciones realizadas. Las tasas
 \textbf{Validación} & \textbf{Medida} & \textbf{Resultado} \\
 \midrule
 Concordancia con OASIS & Tasa de atrofia propia / tasa de OASIS & Converted 1,02; sano 1,18; dementes 1,27 y 1,56 \\
-Test-retest & Error típico (mediana), tejido / ventrículos & 6,9~ml / 0,22~ml \\
+Test-retest & Mediana de diferencias absolutas, tejido / ventrículos & 6,9~ml / 0,22~ml \\
 MRBrainS18 ($n = 7$) & Dice medio (rango) / correlación de volúmenes & 0,84 (0,74--0,91) / $r = 0{,}98$ \\
 \bottomrule
 \end{tabular}
@@ -329,7 +330,7 @@ Finalmente, el análisis de textura complementó las mediciones volumétricas al
  
 \begin{itemize}
     \item Se analizó un paciente por grupo (dos en el caso de demencia), por lo que los resultados son descriptivos y no permiten generalizar.
-    \item OAS2\_0087 cuenta con solo dos visitas, lo que impide estimar una tendencia.
+    \item OAS2\_0087 cuenta con solo dos visitas, lo que permite calcular una tasa de cambio, pero limita la evaluación de su estabilidad temporal.
     \item La ubicación inicial del atlas puede fallar en imágenes con menos ruido. Para saber dónde ubicarlo, el método construye una máscara aproximada del cerebro erosionando el tejido y conservando la región conectada más grande. Entre el cerebro y la cara o el cuello existen puentes finos de tejido: en una imagen ruidosa el ruido los interrumpe y la región más grande es solo el cerebro, pero en una imagen más limpia (como el promedio de adquisiciones o una resonancia de 3~T) los puentes permanecen, la región incluye la cara y el cuello, y el atlas se ubica en un lugar incorrecto. Esto ocurrió en 1 de los 7 sujetos de MRBrainS18 y fue detectado por el control de calidad.
     \item Los resultados varían alrededor de un 1\% entre ejecuciones, debido a que la biblioteca de registro (SimpleITK) distribuye el cálculo entre varios hilos del procesador.
     \item El test-retest mide el error dentro de una misma sesión, con el paciente en la misma posición. No incluye el error entre visitas, que suma el registro entre sesiones y las diferencias de posicionamiento y de adquisición, por lo que el error real al comparar dos visitas es mayor que el informado. En OAS2\_0048, la correlación del registro entre visitas disminuyó de 0,98 en la segunda visita a 0,89 en la quinta, y el salto del volumen de tejido entre la segunda y la tercera visita sugiere que ese error puede alcanzar varios puntos porcentuales en el tejido.
