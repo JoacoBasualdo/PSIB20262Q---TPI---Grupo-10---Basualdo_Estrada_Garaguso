@@ -1,0 +1,2 @@
+paciente,mri_id,tejido_mpr1_ml,tejido_mpr2_ml,dif_tejido_ml,dif_tejido_pct,ventriculos_mpr1_ml,ventriculos_mpr2_ml,dif_ventriculos_ml,dif_ventriculos_pct,correlacion_registro,contraste_mpr1,contraste_mpr2,dif_contraste_pct,homogeneidad_mpr1,homogeneidad_mpr2,dif_homogeneidad_pct,entropia_mpr1,entropia_mpr2,dif_entropia_pct
+OAS2_0070,OAS2_0070_MR1,1262.3,1270.3,8.0,0.63,58.26,58.05,-0.21,-0.36,0.9328,7.5313,7.5454,0.19,0.4008,0.4029,0.52,6.8091,6.7732,-0.53

@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex 2026.9.8)  5 NOV 2026 17:45
+This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex 2026.9.8)  5 NOV 2026 20:20
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -575,12 +575,12 @@ Overfull \hbox (12.12373pt too wide) in paragraph at lines 184--185
  []
 
 [4] [5] [6] [7]
-Overfull \hbox (0.49321pt too wide) in paragraph at lines 310--311
-\T1/cmr/m/n/10 ma-yo-res se-gún el mé-to-do pro-pio (se-gún OA-SIS, la ma-yor ta-sa de atro-fia co-rres-pon-de a OAS2_0087).
+Underfull \hbox (badness 3158) in paragraph at lines 280--281
+[]|\T1/cmr/m/n/9 Concordancia con
  []
 
 [8]
-Overfull \hbox (8.85732pt too wide) in paragraph at lines 312--313
+Overfull \hbox (8.85732pt too wide) in paragraph at lines 331--332
 []\T1/cmr/m/n/10 La Fi-gu-ra []4[] mues-tra la com-pa-ra-ción ana-tó-mi-ca en-tre la pri-me-ra y la úl-ti-ma vi-si-ta de OAS2_0127,
  []
 
@@ -588,17 +588,17 @@ Overfull \hbox (8.85732pt too wide) in paragraph at lines 312--313
 <Imagenes/banda_textura.png, id=228, 477.785pt x 170.13562pt>
 File: Imagenes/banda_textura.png Graphic file (type png)
 <use Imagenes/banda_textura.png>
-Package pdftex.def Info: Imagenes/banda_textura.png  used on input line 349.
+Package pdftex.def Info: Imagenes/banda_textura.png  used on input line 368.
 (pdftex.def)             Requested size: 362.77524pt x 129.1798pt.
 <Imagenes/glcm_textura.png, id=231, 286.57062pt x 260.47313pt>
 File: Imagenes/glcm_textura.png Graphic file (type png)
 <use Imagenes/glcm_textura.png>
-Package pdftex.def Info: Imagenes/glcm_textura.png  used on input line 358.
+Package pdftex.def Info: Imagenes/glcm_textura.png  used on input line 377.
 (pdftex.def)             Requested size: 256.0774pt x 232.7623pt.
 <../Resultados/Interfaz/OAS2_0048/Graficos/textura_OAS2_0048.png, id=232, 642.35277pt x 353.27277pt>
 File: ../Resultados/Interfaz/OAS2_0048/Graficos/textura_OAS2_0048.png Graphic file (type png)
 <use ../Resultados/Interfaz/OAS2_0048/Graficos/textura_OAS2_0048.png>
-Package pdftex.def Info: ../Resultados/Interfaz/OAS2_0048/Graficos/textura_OAS2_0048.png  used on input line 365.
+Package pdftex.def Info: ../Resultados/Interfaz/OAS2_0048/Graficos/textura_OAS2_0048.png  used on input line 384.
 (pdftex.def)             Requested size: 362.77524pt x 199.51323pt.
  [11
 
@@ -606,18 +606,18 @@ Package pdftex.def Info: ../Resultados/Interfaz/OAS2_0048/Graficos/textura_OAS2_
 <../Resultados/Graficos/ComparacionAnatomica/comparacion_ventricular_OAS2_0127.png, id=239, 604.09218pt x 924.20576pt>
 File: ../Resultados/Graficos/ComparacionAnatomica/comparacion_ventricular_OAS2_0127.png Graphic file (type png)
 <use ../Resultados/Graficos/ComparacionAnatomica/comparacion_ventricular_OAS2_0127.png>
-Package pdftex.def Info: ../Resultados/Graficos/ComparacionAnatomica/comparacion_ventricular_OAS2_0127.png  used on input line 374.
+Package pdftex.def Info: ../Resultados/Graficos/ComparacionAnatomica/comparacion_ventricular_OAS2_0127.png  used on input line 393.
 (pdftex.def)             Requested size: 234.73653pt x 359.12729pt.
  [12 <../Resultados/Interfaz/OAS2_0048/Graficos/textura_OAS2_0048.png>]
 <Imagenes/TejidoCerebral.png, id=245, 551.56062pt x 199.24437pt>
 File: Imagenes/TejidoCerebral.png Graphic file (type png)
 <use Imagenes/TejidoCerebral.png>
-Package pdftex.def Info: Imagenes/TejidoCerebral.png  used on input line 382.
+Package pdftex.def Info: Imagenes/TejidoCerebral.png  used on input line 401.
 (pdftex.def)             Requested size: 234.73653pt x 84.79478pt.
 <Imagenes/Concordancia.png, id=246, 375.4025pt x 283.0575pt>
 File: Imagenes/Concordancia.png Graphic file (type png)
 <use Imagenes/Concordancia.png>
-Package pdftex.def Info: Imagenes/Concordancia.png  used on input line 390.
+Package pdftex.def Info: Imagenes/Concordancia.png  used on input line 409.
 (pdftex.def)             Requested size: 234.73653pt x 176.99687pt.
  [13 <../Resultados/Graficos/ComparacionAnatomica/comparacion_ventricular_OAS2_0127.png> <./Imagenes/TejidoCerebral.png>] [14 <./Imagenes/Concordancia.png>]
 
@@ -640,13 +640,13 @@ Package rerunfilecheck Info: File `PSIB20262Q---TPI---Grupo-10---Basualdo_Estrad
 Here is how much of TeX's memory you used:
  19385 strings out of 467099
  377346 string characters out of 5412503
- 781520 words of memory out of 5000000
+ 780753 words of memory out of 5000000
  48434 multiletter control sequences out of 15000+600000
  647716 words of font info for 85 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
  74i,13n,80p,1494b,1170s stack positions out of 10000i,1000n,20000p,200000b,200000s
 <c:/texlive/2026/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb><c:/texlive/2026/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi8.pfb><c:/texlive/2026/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi9.pfb><c:/texlive/2026/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb><c:/texlive/2026/texmf-dist/fonts/type1/public/amsfonts/cm/cmr8.pfb><c:/texlive/2026/texmf-dist/fonts/type1/public/amsfonts/cm/cmr9.pfb><c:/texlive/2026/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb><c:/texlive/2026/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy7.pfb><c:/texlive/2026/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy8.pfb><c:/texlive/2026/texmf-dist/fonts/type1/public/cm-super/sfbi1000.pfb><c:/texlive/2026/texmf-dist/fonts/type1/public/cm-super/sfbx0800.pfb><c:/texlive/2026/texmf-dist/fonts/type1/public/cm-super/sfbx0900.pfb><c:/texlive/2026/texmf-dist/fonts/type1/public/cm-super/sfbx1000.pfb><c:/texlive/2026/texmf-dist/fonts/type1/public/cm-super/sfbx1200.pfb><c:/texlive/2026/texmf-dist/fonts/type1/public/cm-super/sfbx1440.pfb><c:/texlive/2026/texmf-dist/fonts/type1/public/cm-super/sfbx2074.pfb><c:/texlive/2026/texmf-dist/fonts/type1/public/cm-super/sfcc1200.pfb><c:/texlive/2026/texmf-dist/fonts/type1/public/cm-super/sfcc1440.pfb><c:/texlive/2026/texmf-dist/fonts/type1/public/cm-super/sfcc1728.pfb><c:/texlive/2026/texmf-dist/fonts/type1/public/cm-super/sfrm0800.pfb><c:/texlive/2026/texmf-dist/fonts/type1/public/cm-super/sfrm0900.pfb><c:/texlive/2026/texmf-dist/fonts/type1/public/cm-super/sfrm1000.pfb><c:/texlive/2026/texmf-dist/fonts/type1/public/cm-super/sfrm1200.pfb><c:/texlive/2026/texmf-dist/fonts/type1/public/cm-super/sfti1000.pfb><c:/texlive/2026/texmf-dist/fonts/type1/public/cm-super/sftt1000.pfb>
-Output written on PSIB20262Q---TPI---Grupo-10---Basualdo_Estrada_Garaguso.pdf (15 pages, 2285028 bytes).
+Output written on PSIB20262Q---TPI---Grupo-10---Basualdo_Estrada_Garaguso.pdf (15 pages, 2289025 bytes).
 PDF statistics:
  387 PDF objects out of 1000 (max. 8388607)
  304 compressed objects within 4 object streams

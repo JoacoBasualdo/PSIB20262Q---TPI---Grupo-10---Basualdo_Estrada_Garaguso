@@ -1,2 +1,2 @@
 paciente,grupo,cantidad_visitas,anios_seguimiento,volumen_inicial_ml,volumen_final_ml,cambio_total_ml,cambio_total_pct,tasa_promedio_ml_anio,nwbv_oasis_inicial,nwbv_oasis_final,cdr_inicial,cdr_final,mmse_inicial,mmse_final
-OAS2_0070,Nondemented,5,6.533,1287.9,1283.3,-4.600000000000136,-0.3571705877785648,-0.7041175570182361,0.7282,0.7049,0.0,0.0,28.0,30.0
+OAS2_0070,Nondemented,5,6.533,1275.1,1273.5,-1.599999999999909,-0.1254803544819943,-0.24491045461501745,0.7282,0.7049,0.0,0.0,28.0,30.0

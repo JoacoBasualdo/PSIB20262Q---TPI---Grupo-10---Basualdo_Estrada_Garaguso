@@ -250,7 +250,7 @@ Como salidas del procesamiento se generó un reporte en PDF por paciente, con la
 El método se evaluó de tres formas:
 \begin{itemize}
     \item \textbf{Concordancia con OASIS}: se comparó la tasa de atrofia obtenida (variación anual del nWBV propio) con la del nWBV publicado por OASIS (Marcus et al., 2010), calculado por los autores con su propio método automático. 
-    \item \textbf{Test-retest (precisión)}: se compararon las dos primeras adquisiciones (\texttt{mpr-1} y \texttt{mpr-2}) de una misma sesión, dado que no se esperan cambios anatómicos reales entre ellas. El procedimiento se aplicó a las dos primeras visitas de cada paciente para estimar la variabilidad de las mediciones de volumen cerebral, volumen ventricular y textura periventricular (contraste, homogeneidad y entropía).
+    \item \textbf{Test-retest (precisión)}: se compararon dos adquisiciones consecutivas (\texttt{mpr-1} y \texttt{mpr-2}) de una misma sesión, dado que no se esperan cambios anatómicos reales entre ellas. La variabilidad volumétrica se evaluó en las dos primeras visitas de los cuatro pacientes, mientras que la repetibilidad de las características de textura (contraste, homogeneidad y entropía) se analizó en la primera visita de cada uno. En ambos casos, la variabilidad típica se estimó mediante la mediana de las diferencias absolutas entre adquisiciones.
     \item \textbf{Segmentación manual externa (exactitud de los ventrículos)}: como OASIS no publica volúmenes ventriculares, se utilizó el conjunto de entrenamiento de MRBrainS18 (Kuijf et al., 2024; 7 sujetos mayores de 50 años con distintos grados de atrofia), en el que expertos segmentaron manualmente los ventrículos. La superposición se cuantificó con el coeficiente Dice, $D = 2|A \cap B| / (|A| + |B|)$, que vale 1 si ambas máscaras coinciden y 0 si no se superponen. La referencia manual incluye todos los ventrículos (laterales con sus astas temporales, tercero y cuarto), mientras que el método mide solo los ventrículos laterales.
 \end{itemize}
 
@@ -262,24 +262,43 @@ El procesamiento se implementó en Python, utilizando NumPy y SciPy para el cál
 
 \subsection{Validación del método}
 
-La Tabla~\ref{tab:validacion} resume las tres validaciones realizadas. Las tasas de atrofia obtenidas fueron similares a las de OASIS en el paciente sano y el convertido (1,18 y 1,02 veces las publicadas, respectivamente), mientras que en los pacientes con demencia fueron mayores (1,27 y 1,56 veces). 
-En el ensayo test-retest, la variabilidad típica, calculada como la mediana de las diferencias absolutas entre adquisiciones, fue de 6,9~ml (0,55\%) para el tejido cerebral y de 0,22~ml (0,48\%) para los ventrículos.
+La Tabla~\ref{tab:validacion} resume las tres validaciones realizadas. Las tasas de atrofia obtenidas fueron similares a las de OASIS en el paciente sano y el convertido (1,18 y 1,02 veces las publicadas, respectivamente), mientras que en los pacientes con demencia fueron mayores (1,27 y 1,56 veces).
+
+En el ensayo test-retest, la variabilidad típica, calculada como la mediana de las diferencias absolutas entre adquisiciones, fue de 6,9~ml (0,55\%) para el tejido cerebral y de 0,22~ml (0,48\%) para los ventrículos. Para las características de textura periventricular, las medianas de las diferencias porcentuales absolutas fueron del 7,11\% para el contraste, 3,90\% para la homogeneidad y 1,13\% para la entropía. Estas últimas mediciones se realizaron sobre la primera visita de los cuatro pacientes.
+
 Se identificó un caso atípico en OAS2\_0127, con una diferencia de 83~ml de tejido entre adquisiciones. Finalmente, la comparación con MRBrainS18 obtuvo un coeficiente Dice medio de 0,84 y una correlación de volúmenes de $r=0{,}98$.
 
 \begin{table}[H]
-\centering
-\small
-\begin{tabular}{p{3.6cm} p{5.6cm} p{4.2cm}}
-\toprule
-\textbf{Validación} & \textbf{Medida} & \textbf{Resultado} \\
-\midrule
-Concordancia con OASIS & Tasa de atrofia propia / tasa de OASIS & Converted 1,02; sano 1,18; dementes 1,27 y 1,56 \\
-Test-retest & Mediana de diferencias absolutas, tejido / ventrículos & 6,9~ml / 0,22~ml \\
-MRBrainS18 ($n = 7$) & Dice medio (rango) / correlación de volúmenes & 0,84 (0,74--0,91) / $r = 0{,}98$ \\
-\bottomrule
-\end{tabular}
-\caption{Resultados de las tres validaciones del método.}
-\label{tab:validacion}
+    \centering
+    \small
+    \renewcommand{\arraystretch}{1.2}
+    \begin{tabular}{p{2.7cm} p{5.6cm} p{4.3cm}}
+        \toprule
+        \textbf{Validación} & \textbf{Medida} & \textbf{Resultado} \\
+        \midrule
+
+        Concordancia con OASIS
+        & Tasa de atrofia propia / tasa de OASIS
+        & Converted 1,02; sano 1,18; dementes 1,27 y 1,56 \\
+        \midrule
+
+        Test-retest
+        & Volumen cerebral / ventricular ($n=8$)
+        & 6,9 / 0,22 ml \\
+
+        & Textura: contraste / homogeneidad / entropía ($n=4$)
+        & 7,11 / 3,90 / 1,13 \% \\
+        \midrule
+
+        MRBrainS18 ($n=7$)
+        & Dice medio (rango) / correlación de volúmenes
+        & 0,84 (0,74--0,91) / $r=0,98$ \\
+
+        \bottomrule
+    \end{tabular}
+
+    \caption{Resultados de las tres validaciones del método. En el test-retest se presenta la mediana de las diferencias absolutas entre adquisiciones, expresadas en ml para los volúmenes y en porcentaje para las características de textura.}
+    \label{tab:validacion}
 \end{table}
  
 El volumen ventricular estimado fue, en promedio, un 19\% menor que la referencia manual. Esta diferencia se explica parcialmente porque MRBrainS18 incluye estructuras ventriculares adicionales que nuestro método no segmenta, lo que también afecta al coeficiente Dice. Sin embargo, la elevada correlación de volúmenes ($r=0{,}98$) indica una buena concordancia entre las mediciones de ambos métodos. En uno de los sujetos se detectó un registro incorrecto del atlas, identificado mediante el control de calidad.
@@ -307,7 +326,7 @@ La Tabla~\ref{tab:pacientes} presenta la evolución de cada paciente. Las tasas 
 \label{tab:pacientes}
 \end{table}
  
-El paciente sano presentó la menor tasa de atrofia y de expansión ventricular, y OAS2\_0048 las mayores según el método propio (según OASIS, la mayor tasa de atrofia corresponde a OAS2\_0087). Este último es además el que mostró el mayor deterioro clínico, con una caída del MMSE de 19 a 4 puntos en 3,4 años.
+El paciente sano presentó la menor tasa de atrofia y de expansión ventricular, mientras que OAS2\_0048 mostró las mayores según el método propio. En cambio, según OASIS, la mayor tasa de atrofia corresponde a OAS2\_0087. OAS2\_0048 registró, además, la mayor caída del MMSE, de 19 a 4 puntos en 3,4 años.
 
 La Figura~\ref{fig:comparacion} muestra la comparación anatómica entre la primera y la última visita de OAS2\_0127, sobre los mismos cortes. Se observa el aumento del volumen de los ventrículos laterales a lo largo de los 7,2 años de seguimiento.
  
@@ -324,7 +343,7 @@ El paciente sano también presentó expansión ventricular, compatible con el en
 
 En los pacientes con demencia, el método estimó tasas de atrofia superiores a las publicadas por OASIS. En OAS2\_0048 se observó una caída pronunciada del volumen cerebral entre MR2 y MR3, seguida de una leve recuperación, lo que sugiere un posible error de segmentación asociado al efecto de volumen parcial entre tejido y líquido cefalorraquídeo. Por ello, las tendencias se estimaron mediante regresión lineal sobre todas las visitas, evitando basar las conclusiones en mediciones aisladas.
 
-Finalmente, el análisis de textura complementó las mediciones volumétricas al caracterizar la distribución espacial de intensidades del tejido periventricular. Sin embargo, sus variaciones no pueden atribuirse directamente a procesos neurodegenerativos sin una validación adicional.
+El análisis de textura complementó las mediciones volumétricas al caracterizar la distribución espacial de intensidades del tejido periventricular. El ensayo test-retest mostró una menor variabilidad para la entropía (1,13\%) que para la homogeneidad (3,90\%) y el contraste (7,11\%). Sin embargo, la repetibilidad presentó diferencias entre pacientes, por lo que las variaciones longitudinales deben interpretarse con cautela y no pueden atribuirse directamente a procesos neurodegenerativos sin una validación adicional.
 
 \subsection{Limitaciones}
  
@@ -380,7 +399,7 @@ La Figura~\ref{fig:glcm_textura} presenta la matriz GLCM obtenida a partir de di
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.55\textwidth]{Imagenes/TejidoCerebral.png}
-    \caption{Extracción del cerebro sobre el paciente OAS127.}
+    \caption{Extracción del cerebro del paciente OAS2\_0127, representada en los planos sagital, coronal y axial.}
     \label{fig:tejido}
 \end{figure}
 
