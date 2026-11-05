@@ -10,17 +10,19 @@
 \contentsline {subsection}{\numberline {2.2}Acondicionamiento de las imágenes}{4}{subsection.2.2}%
 \contentsline {subsection}{\numberline {2.3}Extracción del cerebro}{5}{subsection.2.3}%
 \contentsline {subsection}{\numberline {2.4}Comparación entre visitas}{5}{subsection.2.4}%
-\contentsline {subsection}{\numberline {2.5}Segmentación de los ventrículos laterales}{6}{subsection.2.5}%
+\contentsline {subsection}{\numberline {2.5}Segmentación de los ventrículos laterales}{5}{subsection.2.5}%
 \contentsline {subsection}{\numberline {2.6}Análisis de textura periventricular}{6}{subsection.2.6}%
-\contentsline {subsection}{\numberline {2.7}Medidas}{7}{subsection.2.7}%
+\contentsline {subsection}{\numberline {2.7}Medidas}{6}{subsection.2.7}%
 \contentsline {subsection}{\numberline {2.8}Análisis longitudinal y clínico}{7}{subsection.2.8}%
 \contentsline {subsection}{\numberline {2.9}Validación}{7}{subsection.2.9}%
-\contentsline {subsection}{\numberline {2.10}Implementación}{8}{subsection.2.10}%
+\contentsline {subsection}{\numberline {2.10}Implementación}{7}{subsection.2.10}%
 \contentsline {section}{\numberline {3}Resultados}{8}{section.3}%
 \contentsline {subsection}{\numberline {3.1}Validación del método}{8}{subsection.3.1}%
-\contentsline {subsection}{\numberline {3.2}Evolución por paciente}{9}{subsection.3.2}%
-\contentsline {section}{\numberline {4}Conclusiones}{10}{section.4}%
-\contentsline {subsection}{\numberline {4.1}Discusión}{10}{subsection.4.1}%
-\contentsline {subsection}{\numberline {4.2}Limitaciones}{11}{subsection.4.2}%
-\contentsline {section}{\numberline {A}Análisis de textura periventricular}{12}{appendix.A}%
-\contentsline {section}{Bibliografía}{14}{section*.9}%
+\contentsline {subsection}{\numberline {3.2}Evolución por paciente}{8}{subsection.3.2}%
+\contentsline {section}{\numberline {4}Conclusiones}{9}{section.4}%
+\contentsline {subsection}{\numberline {4.1}Discusión}{9}{subsection.4.1}%
+\contentsline {subsection}{\numberline {4.2}Limitaciones}{10}{subsection.4.2}%
+\contentsline {section}{\numberline {A}Análisis de textura periventricular}{11}{appendix.A}%
+\contentsline {section}{\numberline {B}Segmentación y extracción de cerebro}{13}{appendix.B}%
+\contentsline {section}{\numberline {C}Validación}{14}{appendix.C}%
+\contentsline {section}{Bibliografía}{15}{section*.11}%

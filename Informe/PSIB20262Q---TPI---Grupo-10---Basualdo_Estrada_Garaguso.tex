@@ -168,9 +168,7 @@ La ponderación T1 aprovecha las diferencias en los tiempos de relajación longi
 
 \subsection{Estado del Arte}
 
-El conjunto de datos OASIS-2 fue publicado por Marcus et al. (2010), de la Universidad de Washington, con el objetivo de facilitar la investigación del envejecimiento cerebral y la demencia. Contiene resonancias magnéticas T1 de 150 sujetos de entre 60 y 96 años, con dos o más visitas longitudinales y evaluaciones clínicas mediante la escala CDR.
-
-En cada sesión se adquirieron entre tres y cuatro imágenes utilizando un resonador Siemens Vision de 1,5~T. Estas adquisiciones permiten mejorar la relación señal-ruido mediante su alineación y promediado.
+El conjunto de datos OASIS-2 fue publicado por Marcus et al. (2010), de la Universidad de Washington, con el objetivo de facilitar la investigación del envejecimiento cerebral y la demencia. Contiene resonancias magnéticas T1 de 150 sujetos de entre 60 y 96 años, con dos o más visitas longitudinales y evaluaciones clínicas mediante la escala CDR. En cada sesión se adquirieron entre tres y cuatro imágenes utilizando un resonador Siemens Vision de 1,5~T. Estas adquisiciones permiten mejorar la relación señal-ruido mediante su alineación y promediado.
 
 El procesamiento original incluyó el registro espacial de las imágenes con un atlas para estimar el volumen intracraneal total (eTIV) y la segmentación del tejido cerebral mediante modelos estadísticos. A partir de estas mediciones se obtuvo el volumen cerebral normalizado (nWBV), utilizado para cuantificar la atrofia y comparar su evolución longitudinal. Estas métricas constituyen la referencia para evaluar el método desarrollado en este trabajo.
 
@@ -183,27 +181,19 @@ El objetivo de este proyecto es desarrollar un algoritmo computacional que permi
  
 Se utilizó el conjunto de datos longitudinal OASIS-2 (Marcus et al., 2010), descripto en la sección de Estado del Arte. En cada visita se adquirieron entre tres y cuatro resonancias T1 consecutivas, con un tamaño de vóxel de $1 \times 1 \times 1{,}25$~mm, almacenadas en formato Analyze (archivos \texttt{.img} y \texttt{.hdr}). Los datos clínicos (grupo, edad, CDR, MMSE, eTIV y nWBV de cada visita) se obtuvieron de la planilla publicada junto con el dataset.
  
-Se seleccionaron cuatro pacientes que representan distintas evoluciones clínicas:
-\begin{itemize}
-    \item \textbf{OAS2\_0070} (sano): cinco visitas entre los 80 y los 86 años, con CDR 0 en todas ellas.
-    \item \textbf{OAS2\_0048} (demencia): cinco visitas entre los 66 y los 69 años, con demencia leve (CDR 1) sostenida.
-    \item \textbf{OAS2\_0087} (demencia): dos visitas a los 96 y 98 años, con progresión de demencia leve (CDR 1) a moderada (CDR 2).
-    \item \textbf{OAS2\_0127} (\textit{converted}): cinco visitas entre los 79 y los 86 años; ingresó sano (CDR 0) y desde la segunda visita presentó demencia muy leve (CDR 0,5).
-\end{itemize}
+Se seleccionaron cuatro pacientes con distintas evoluciones clínicas: un sujeto sano (\textbf{OAS2\_0070}, cinco visitas entre los 80 y 86 años, CDR 0 en todas), dos con demencia (\textbf{OAS2\_0048}, cinco visitas entre los 66 y 69 años con CDR 1 sostenido; y \textbf{OAS2\_0087}, dos visitas a los 96 y 98 años con progresión de CDR 1 a 2) y uno \textit{converted} (\textbf{OAS2\_0127}, cinco visitas entre los 79 y 86 años, que pasó de CDR 0 a 0,5 desde la segunda visita).
 
 \subsection{Acondicionamiento de las imágenes}
  
 Cada visita se acondicionó en tres pasos, con el objetivo de que el mismo tejido tenga el mismo brillo en toda la imagen y en todas las visitas:
  
 \begin{enumerate}
-    \item \textbf{Promediado de adquisiciones}: las adquisiciones de una misma sesión se alinearon con la primera (\texttt{mpr-1}) mediante un registro rígido de seis parámetros (tres rotaciones y tres traslaciones), que maximiza la información mutua entre las imágenes con un descenso por gradiente en tres resoluciones. Las imágenes alineadas se promediaron vóxel a vóxel, lo que reduce el ruido y aumenta la relación señal-ruido, siguiendo la misma estrategia que el protocolo de OASIS.
+    \item \textbf{Promediado de adquisiciones}: las adquisiciones de una misma sesión se alinearon con la primera (\texttt{mpr-1}) mediante un registro rígido de seis parámetros (tres rotaciones y tres traslaciones), que maximiza la información mutua entre las imágenes con un descenso por gradiente en tres resoluciones. Las imágenes alineadas se promediaron vóxel a vóxel, lo que reduce el ruido.
  
-    \item \textbf{Corrección de la inhomogeneidad de campo (\textit{bias field})}: el resonador no ilumina la cabeza de forma pareja, por lo que un mismo tejido puede verse más claro o más oscuro según su ubicación. Esta variación lenta se estimó y corrigió con el algoritmo N4 (Tustison et al., 2010), calculado sobre una máscara de la cabeza. La máscara se obtuvo con el umbral de Otsu, seguido de un cierre morfológico, el relleno de huecos corte a corte y la selección de la región conectada más grande, para separar la cabeza del fondo.
+    \item \textbf{Corrección de la inhomogeneidad de campo (\textit{bias field})}: el resonador no ilumina la cabeza de forma pareja, por lo que un mismo tejido puede verse más claro o más oscuro según su ubicación. Esta variación lenta se estimó y corrigió con el algoritmo N4 (Tustison et al., 2010), calculado sobre una máscara de la cabeza. La máscara se obtuvo con el umbral de Otsu.
  
     \item \textbf{Normalización de intensidad}: dentro de la máscara de la cabeza, el percentil 1 de intensidad se llevó a 0 y el percentil 99 a 1, recortando los valores fuera de ese rango y fijando el fondo en 0. Así, el umbral de tejido es comparable entre visitas aunque el brillo general de las adquisiciones difiera.
 \end{enumerate}
- 
-Con fines comparativos se aplicó además un filtro de mediana de $3 \times 3 \times 3$ vóxeles al promedio de la primera visita, pero no se utilizó en el resto del procesamiento, ya que el promediado de adquisiciones reduce el ruido sin difuminar los bordes entre tejidos.
  
 
 \subsection{Extracción del cerebro}
@@ -320,12 +310,7 @@ El paciente sano presentó la menor tasa de atrofia y de expansión ventricular,
 
 La Figura~\ref{fig:comparacion} muestra la comparación anatómica entre la primera y la última visita de OAS2\_0127, sobre los mismos cortes. Se observa el aumento del volumen de los ventrículos laterales a lo largo de los 7,2 años de seguimiento.
  
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.55\textwidth]{../Resultados/Graficos/ComparacionAnatomica/comparacion_ventricular_OAS2_0127}
-\caption{Ventrículos laterales de OAS2\_0127 en la primera (izquierda) y la última visita (derecha), sobre los mismos cortes sagital, coronal y axial. Contorno amarillo: segmentación automática.}
-\label{fig:comparacion}
-\end{figure}
+
 
 El análisis de textura periventricular del paciente OAS2\_0048 mostró un aumento general del contraste y la entropía, acompañado de una disminución de la homogeneidad y la energía, aunque con variaciones entre visitas. La región analizada, su matriz GLCM y la evolución longitudinal de estas características se presentan en el Anexo, Figuras~\ref{fig:banda_textura}, \ref{fig:glcm_textura} y \ref{fig:evolucion_textura}.
 
@@ -381,6 +366,30 @@ La Figura~\ref{fig:glcm_textura} presenta la matriz GLCM obtenida a partir de di
     \label{fig:evolucion_textura}
 \end{figure}
 
+\section{Segmentación y extracción de cerebro}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.55\textwidth]{../Resultados/Graficos/ComparacionAnatomica/comparacion_ventricular_OAS2_0127}
+    \caption{Ventrículos laterales de OAS2\_0127 en la primera (izquierda) y la última visita (derecha), sobre los mismos cortes sagital, coronal y axial. Contorno amarillo: segmentación automática.}
+    \label{fig:comparacion}
+\end{figure}
+
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.55\textwidth]{Imagenes/TejidoCerebral.png}
+    \caption{Extracción del cerebro sobre el paciente OAS127.}
+    \label{fig:tejido}
+\end{figure}
+
+\section{Validación}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.55\textwidth]{Imagenes/Concordancia.png}
+    \caption{Concordancia con OASIS para el paciente OAS2\_0127: nWBV propio (rojo) y nWBV publicado por OASIS (negro) en cada visita, con sus rectas de ajuste. La pendiente de cada recta corresponde a la tasa de atrofia.}
+    \label{fig:concordancia}
+\end{figure}
 \clearpage
 \section*{Bibliografía}
 \phantomsection
