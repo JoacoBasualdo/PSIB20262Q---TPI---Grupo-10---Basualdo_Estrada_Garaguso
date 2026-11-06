@@ -154,9 +154,9 @@ Firma y Fecha & \\ \hline
 \subsection{Marco Teórico}
 \subsubsection{Enfermedad de Alzheimer}
 
-La Enfermedad de Alzheimer es un trastorno neurodegenerativo primario y progresivo, catalogado como la causa más frecuente de demencia a nivel global. La patología se caracteriza por la acumulación extracelular de placas de proteína beta-amiloide y la formación intracelular de ovillos de proteína tau. Estas alteraciones desencadenan una cascada tóxica que interrumpe la comunicación celular, resultando en una pérdida masiva de sinapsis y la subsecuente muerte neuronal.
+La Enfermedad de Alzheimer es un trastorno neurodegenerativo primario y progresivo, catalogado como la causa más frecuente de demencia a nivel global. La patología se caracteriza por la acumulación extracelular de placas de proteína beta-amiloide y la formación intracelular de ovillos de proteína tau (Fowler et al., 2015). Estas alteraciones desencadenan una cascada tóxica que interrumpe la comunicación celular, resultando en una pérdida masiva de sinapsis y la subsecuente muerte neuronal.
 
-A nivel macroscópico, esta neurodegeneración sostenida se manifiesta como una severa atrofia estructural del encéfalo. El proceso atrófico provoca una reducción mensurable del volumen del tejido cerebral. Como consecuencia directa de esta pérdida progresiva de masa encefálica, se produce un fenómeno anatómico compensatorio conocido como expansión ventricular, donde se ensanchan drásticamente para ocupar el volumen intracraneal que el tejido muerto ha dejado vacío, llenándose de líquido cefalorraquídeo (LCR).
+A nivel macroscópico, esta neurodegeneración sostenida se manifiesta como una severa atrofia estructural del encéfalo. El proceso atrófico provoca una reducción mensurable del volumen del tejido cerebral. Como consecuencia directa de esta pérdida progresiva de masa encefálica, se produce un fenómeno anatómico compensatorio conocido como expansión ventricular, donde los ventrículos se ensanchan drásticamente para ocupar el volumen intracraneal que el tejido muerto ha dejado vacío, llenándose de líquido cefalorraquídeo (LCR).
 
 La magnitud de estos cambios anatómicos se relaciona con el deterioro cognitivo del paciente, evaluado mediante herramientas clínicas como la Clinical Dementia Rating (CDR), que clasifica la demencia en normal (0), muy leve (0,5), leve (1), moderada (2) y severa (3), y el Mini-Mental State Examination (MMSE), una prueba cognitiva de 0 a 30 puntos en la que valores menores a 24 sugieren deterioro.
 
@@ -212,7 +212,7 @@ Como control de calidad, el procedimiento emite un aviso si la correlación entr
 
 \subsection{Segmentación de los ventrículos laterales}
  
-Los ventrículos laterales se segmentaron combinando un atlas anatómico con el umbral de intensidad. Se utilizaron las etiquetas de ventrículo lateral izquierdo y derecho del atlas subcortical Harvard-Oxford, que se llevaron al espacio de cada visita con las transformaciones ya calculadas en la extracción del cerebro (atlas $\rightarrow$ primera visita y, en las visitas siguientes, primera visita $\rightarrow$ visita actual). Para cada ventrículo:
+Los ventrículos laterales se segmentaron combinando un atlas anatómico con el umbral de intensidad. Se utilizaron las etiquetas de ventrículo lateral izquierdo y derecho del atlas subcortical Harvard-Oxford (Frazier et al., 2005; Desikan et al., 2006), que se llevaron al espacio de cada visita con las transformaciones ya calculadas en la extracción del cerebro (atlas $\rightarrow$ primera visita y, en las visitas siguientes, primera visita $\rightarrow$ visita actual). Para cada ventrículo:
  
 \begin{enumerate}
     \item Se delimitó una región de búsqueda de 8~mm alrededor de la etiqueta del atlas, lo que permite detectar ventrículos agrandados sin buscar líquido cefalorraquídeo en toda la cabeza.
@@ -257,6 +257,8 @@ El método se evaluó de tres formas:
 \subsection{Implementación}
  
 El procesamiento se implementó en Python, utilizando NumPy y SciPy para el cálculo numérico y la morfología, SimpleITK para los registros y la corrección N4, nibabel para la lectura de las imágenes, nilearn para la obtención de los atlas MNI152 y Harvard-Oxford, scikit-image para el análisis de textura, pandas para los datos tabulares y Matplotlib para las figuras. El código se organizó en módulos según la etapa del procesamiento (lectura, acondicionamiento, extracción de características, interpretación, validación, visualización y reporte).
+
+Además, se desarrolló una interfaz gráfica con PySide6 (\texttt{Interfaz/App.py}) que permite seleccionar un paciente, la cantidad de visitas y las validaciones a ejecutar, y muestra los resultados en una pestaña por etapa del procesamiento, con la opción de exportar el reporte en PDF.
 
 \section{Resultados}
 
@@ -335,7 +337,6 @@ La Figura~\ref{fig:comparacion} muestra la comparación anatómica entre la prim
 El análisis de textura periventricular del paciente OAS2\_0048 mostró un aumento general del contraste y la entropía, acompañado de una disminución de la homogeneidad y la energía, aunque con variaciones entre visitas. La región analizada, su matriz GLCM y la evolución longitudinal de estas características se presentan en el Anexo, Figuras~\ref{fig:banda_textura}, \ref{fig:glcm_textura} y \ref{fig:evolucion_textura}.
 
 \section{Conclusiones}
-\subsection{Discusión}
 
 \subsection{Discusión}
 
@@ -417,11 +418,13 @@ La Figura~\ref{fig:glcm_textura} presenta la matriz GLCM obtenida a partir de di
 \addcontentsline{toc}{section}{Bibliografía}
 
 \begin{itemize}
-    \item Fowler, K. D., Funt, J. M., Artyomov, M. N., Zeskind, B., Kolitz, S. E., \& Towfic, F. (2015). Leveraging existing data sets to generate new insights into Alzheimer's disease biology in specific patient subsets. Scientific Reports, 5, Artículo 14324. https://doi.org/10.1038/srep14324
-    \item Marcus, D. S., Fotenos, A. F., Csernansky, J. G., Morris, J. C., \& Buckner, R. L. (2010). Open access series of imaging studies: Longitudinal MRI data in nondemented and demented older adults. Journal of Cognitive Neuroscience, 22(12), 2677--2684.
+    \item Desikan, R. S., Ségonne, F., Fischl, B., Quinn, B. T., Dickerson, B. C., Blacker, D., Buckner, R. L., Dale, A. M., Maguire, R. P., Hyman, B. T., Albert, M. S., \& Killiany, R. J. (2006). An automated labeling system for subdividing the human cerebral cortex on MRI scans into gyral based regions of interest. NeuroImage, 31(3), 968--980.
     \item Fonov, V., Evans, A. C., Botteron, K., Almli, C. R., McKinstry, R. C., Collins, D. L., \& Brain Development Cooperative Group (2011). Unbiased average age-appropriate atlases for pediatric studies. NeuroImage, 54(1), 313--327.
-    \item Tustison, N. J., Avants, B. B., Cook, P. A., Zheng, Y., Egan, A., Yushkevich, P. A., \& Gee, J. C. (2010). N4ITK: Improved N3 bias correction. IEEE Transactions on Medical Imaging, 29(6), 1310--1320. https://doi.org/10.1109/TMI.2010.2046908
+    \item Fowler, K. D., Funt, J. M., Artyomov, M. N., Zeskind, B., Kolitz, S. E., \& Towfic, F. (2015). Leveraging existing data sets to generate new insights into Alzheimer's disease biology in specific patient subsets. Scientific Reports, 5, Artículo 14324. https://doi.org/10.1038/srep14324
+    \item Frazier, J. A., Chiu, S., Breeze, J. L., Makris, N., Lange, N., Kennedy, D. N., et al. (2005). Structural brain magnetic resonance imaging of limbic and thalamic volumes in pediatric bipolar disorder. American Journal of Psychiatry, 162(7), 1256--1265.
     \item Kuijf, H. J., Bennink, E., Vincken, K. L., Weaver, N., Biessels, G. J., \& Viergever, M. A. (2024). MR Brain Segmentation Challenge 2018 Data (V1) [Conjunto de datos]. DataverseNL. https://doi.org/10.34894/E0U32Q
+    \item Marcus, D. S., Fotenos, A. F., Csernansky, J. G., Morris, J. C., \& Buckner, R. L. (2010). Open access series of imaging studies: Longitudinal MRI data in nondemented and demented older adults. Journal of Cognitive Neuroscience, 22(12), 2677--2684.
+    \item Tustison, N. J., Avants, B. B., Cook, P. A., Zheng, Y., Egan, A., Yushkevich, P. A., \& Gee, J. C. (2010). N4ITK: Improved N3 bias correction. IEEE Transactions on Medical Imaging, 29(6), 1310--1320. https://doi.org/10.1109/TMI.2010.2046908
 \end{itemize}
 
 

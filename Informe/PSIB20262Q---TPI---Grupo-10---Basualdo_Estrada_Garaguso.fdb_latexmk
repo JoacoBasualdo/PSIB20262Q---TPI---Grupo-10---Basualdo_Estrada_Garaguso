@@ -1,15 +1,15 @@
 # Fdb version 4
-["pdflatex"] 1793922606.63653 "d:/Usuarios/Escritorio/Carpetas/Archivos e Imagenes/Facultad/ITBA 2026/2Q/PSIB/PSIB20262Q---TPI---Grupo-10---Basualdo_Estrada_Garaguso/Informe/PSIB20262Q---TPI---Grupo-10---Basualdo_Estrada_Garaguso.tex" "PSIB20262Q---TPI---Grupo-10---Basualdo_Estrada_Garaguso.pdf" "PSIB20262Q---TPI---Grupo-10---Basualdo_Estrada_Garaguso" 1793922609.04082 0
+["pdflatex"] 1793923424.30927 "d:/Usuarios/Escritorio/Carpetas/Archivos e Imagenes/Facultad/ITBA 2026/2Q/PSIB/PSIB20262Q---TPI---Grupo-10---Basualdo_Estrada_Garaguso/Informe/PSIB20262Q---TPI---Grupo-10---Basualdo_Estrada_Garaguso.tex" "PSIB20262Q---TPI---Grupo-10---Basualdo_Estrada_Garaguso.pdf" "PSIB20262Q---TPI---Grupo-10---Basualdo_Estrada_Garaguso" 1793923426.76366 0
   "../Resultados/Graficos/ComparacionAnatomica/comparacion_ventricular_OAS2_0127.png" 1793921493 963208 d3a3debfa8b1580d4ffec5e9fbe598ac ""
   "../Resultados/Interfaz/OAS2_0048/Graficos/textura_OAS2_0048.png" 1793921493 133399 9ead1e5d609d6a6d3e3c2456efc09c80 ""
   "Imagenes/Concordancia.png" 1793921493 82585 427d3e3e989c34de5bccf244bbf8cabc ""
   "Imagenes/TejidoCerebral.png" 1793921493 273883 07e18b305ff257737482bcf5e99ca424 ""
   "Imagenes/banda_textura.png" 1793921493 160091 6fbf73e634f6951a0eabe3925c69e0ad ""
   "Imagenes/glcm_textura.png" 1793921493 70269 eb95a9fb731d7cd8f31080d5fc5ab855 ""
-  "PSIB20262Q---TPI---Grupo-10---Basualdo_Estrada_Garaguso.aux" 1793922608 8610 6ab96e108dbd17dc14573d3372022e56 "pdflatex"
-  "PSIB20262Q---TPI---Grupo-10---Basualdo_Estrada_Garaguso.out" 1793922608 4452 d4d57488b502a2f4dd243f2e9d83a403 "pdflatex"
-  "PSIB20262Q---TPI---Grupo-10---Basualdo_Estrada_Garaguso.tex" 1793922603 33747 ab8987c529d79a82e1d090f4244c1075 ""
-  "PSIB20262Q---TPI---Grupo-10---Basualdo_Estrada_Garaguso.toc" 1793922608 2384 6950cc25d07dad528bbbfdb5fe68a093 "pdflatex"
+  "PSIB20262Q---TPI---Grupo-10---Basualdo_Estrada_Garaguso.aux" 1793923426 8493 6cbbb3ebcaeba86690ef1438dcb56a70 "pdflatex"
+  "PSIB20262Q---TPI---Grupo-10---Basualdo_Estrada_Garaguso.out" 1793923426 4346 831986d3322c2c09b32a2f96293e3a35 "pdflatex"
+  "PSIB20262Q---TPI---Grupo-10---Basualdo_Estrada_Garaguso.tex" 1793923420 34715 92772672b30a9c0157cfe977834473c7 ""
+  "PSIB20262Q---TPI---Grupo-10---Basualdo_Estrada_Garaguso.toc" 1793923426 2308 ec03fb12e971cf437c2a610fe4fc6dea "pdflatex"
   "c:/texlive/2026/texmf-dist/fonts/enc/dvips/cm-super/cm-super-t1.enc" 1788895911 2971 def0b6c1f0b107b3b936def894055589 ""
   "c:/texlive/2026/texmf-dist/fonts/map/fontname/texfonts.map" 1788897311 3524 cb3e574dea2d1052e39280babc910dc8 ""
   "c:/texlive/2026/texmf-dist/fonts/tfm/jknappen/ec/ecbi1000.tfm" 1788896745 3072 e6fe53b666f9cbd66cb135c6fdea66d3 ""
@@ -155,7 +155,7 @@
   "c:/texlive/2026/texmf-var/fonts/map/pdftex/updmap/pdftex.map" 1788902891 5655996 795b756740562267ad2ae16e70168a76 ""
   "c:/texlive/2026/texmf-var/web2c/pdftex/pdflatex.fmt" 1788902988 3658215 40d107640da31ad15f5dd6216f7d90b2 ""
   "c:/texlive/2026/texmf.cnf" 1788902848 713 e69b156964470283e0530f5060668171 ""
-  "d:/Usuarios/Escritorio/Carpetas/Archivos e Imagenes/Facultad/ITBA 2026/2Q/PSIB/PSIB20262Q---TPI---Grupo-10---Basualdo_Estrada_Garaguso/Informe/PSIB20262Q---TPI---Grupo-10---Basualdo_Estrada_Garaguso.tex" 1793922603 33747 ab8987c529d79a82e1d090f4244c1075 ""
+  "d:/Usuarios/Escritorio/Carpetas/Archivos e Imagenes/Facultad/ITBA 2026/2Q/PSIB/PSIB20262Q---TPI---Grupo-10---Basualdo_Estrada_Garaguso/Informe/PSIB20262Q---TPI---Grupo-10---Basualdo_Estrada_Garaguso.tex" 1793923420 34715 92772672b30a9c0157cfe977834473c7 ""
   (generated)
   "PSIB20262Q---TPI---Grupo-10---Basualdo_Estrada_Garaguso.aux"
   "PSIB20262Q---TPI---Grupo-10---Basualdo_Estrada_Garaguso.log"
