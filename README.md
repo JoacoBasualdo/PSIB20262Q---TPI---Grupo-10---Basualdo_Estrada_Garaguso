@@ -406,6 +406,8 @@ Todo queda en `Resultados/`:
 | `MascarasVentriculares/OAS2_XXXX/` | Máscara 3D de los ventrículos de cada visita (`.nii.gz`); se puede abrir en ITK-SNAP, 3D Slicer o FSLeyes junto con `mpr-1` |
 | `Interfaz/OAS2_XXXX/` | Resultados de la interfaz gráfica para ese paciente: las mismas tablas y gráficos, pero de un solo paciente |
 
+> Los resultados de textura de cada paciente están en `Resultados/Interfaz/<paciente>/`. Los CSV generales de `Resultados/` se generaron antes de agregar la textura; para incluirla, correr `main.py` con `PROCESAR_IMAGENES = True`.
+
 **Fracción ventricular:** volumen ventricular dividido por el volumen de la zona intracraneal, en %. La zona intracraneal es la misma región en todas las visitas de un paciente: dentro de un paciente, la fracción cambia solo si cambian los ventrículos; entre pacientes, quita el efecto del tamaño de la cabeza.
 
 **Zona intracraneal:** es la máscara de cerebro de la plantilla MNI152 llevada al paciente. No es el volumen intracraneal real (mide entre 1,02 y 1,19 veces el eTIV de OASIS), pero sirve como referencia fija para relativizar.
@@ -417,7 +419,7 @@ Todo queda en `Resultados/`:
 | Validación | Resultado |
 |---|---|
 | Test-retest (error del método) | Tejido: 6,9 ml (0,55%). Ventrículos: 0,22 ml (0,48%) |
-| Test-retest (textura) | Error típico de contraste, homogeneidad y entropía: completar con los resultados |
+| Test-retest (textura) | Error típico (mediana de las diferencias, primera visita de los 4 pacientes): contraste 7,11%, homogeneidad 3,90%, entropía 1,13% |
 | MRBrainS18 (7 sujetos) | Dice medio 0,84 (0,74-0,91); correlación de volumen r = 0,98; el método mide en promedio un 19,5% menos que la segmentación manual (diferencia sistemática, no afecta la comparación entre visitas) |
 | Concordancia con OASIS | Cociente entre nuestra pendiente de nWBV y la de OASIS entre 1,02 y 1,56 (mismo sentido en los 4 pacientes) |
 

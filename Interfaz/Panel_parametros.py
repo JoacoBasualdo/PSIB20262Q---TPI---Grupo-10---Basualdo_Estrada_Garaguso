@@ -154,7 +154,7 @@ class PanelParametros(QWidget):
         if not hay_paciente:
             self.etiqueta_info.setText(
                 "No se encontraron pacientes en Dataset/. Correr primero "
-                "«python -m Funciones.Descarga» desde la carpeta del proyecto."
+                "«python descargar_dataset.py» desde la carpeta del proyecto."
             )
             return
 
